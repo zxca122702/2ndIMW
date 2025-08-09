@@ -1671,23 +1671,8 @@ function downloadSingleCode(canvasId, itemName, codeType) {
 function printSingleCode(canvasId) {
   const canvas = document.getElementById(canvasId);
   if (canvas) {
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Print Barcode</title>
-          <style>
-            body { margin: 0; padding: 20px; text-align: center; }
-            img { max-width: 100%; height: auto; }
-          </style>
-        </head>
-        <body>
-          <img src="${canvas.toDataURL()}" />
-          <script>window.print(); window.close();</script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    // Simple browser print of the canvas
+    window.print();
   }
 }
 
@@ -1713,69 +1698,8 @@ function printAllCodes() {
     return;
   }
   
-  const printWindow = window.open('', '_blank');
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Print All Barcodes</title>
-        <style>
-          body { 
-            margin: 0; 
-            padding: 20px; 
-            font-family: Arial, sans-serif;
-          }
-          .barcode-page {
-            page-break-after: always;
-            text-align: center;
-            margin-bottom: 40px;
-          }
-          .barcode-page:last-child {
-            page-break-after: auto;
-          }
-          img { 
-            max-width: 100%; 
-            height: auto; 
-            margin: 20px 0;
-          }
-          h3 {
-            margin: 10px 0;
-            color: #333;
-          }
-          @media print {
-            .barcode-page {
-              page-break-after: always;
-            }
-          }
-        </style>
-      </head>
-      <body>
-  `);
-  
-  canvases.forEach((canvas, index) => {
-    const barcodeItem = canvas.closest('.barcode-item');
-    const title = barcodeItem.querySelector('h6').textContent;
-    const info = barcodeItem.querySelector('.barcode-info').innerHTML;
-    
-    printWindow.document.write(`
-      <div class="barcode-page">
-        <h3>${title}</h3>
-        <div style="font-size: 14px; margin-bottom: 20px;">${info}</div>
-        <img src="${canvas.toDataURL()}" />
-      </div>
-    `);
-  });
-  
-  printWindow.document.write(`
-        <script>
-          window.onload = function() {
-            window.print();
-            window.close();
-          };
-        </script>
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
+  // Simple browser print of the modal content
+  window.print();
 }
 
 // Search and filter functions
