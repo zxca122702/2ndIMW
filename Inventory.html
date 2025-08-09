@@ -1028,7 +1028,7 @@ let currentEditId = null;
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
   loadInitialData();
-  fetchAdminUser();
+  fetchUser();
 });
 
 // API Helper Functions
@@ -1710,25 +1710,42 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-async function fetchAdminUser() {
+async function fetchUser() {
   try {
-    const response = await apiCall('/user'); // Adjust endpoint as needed
-    if (response.success && response.data && response.data.role === 'admin') {
-      displayAdminUser(response.data);
+    const response = await apiCall('/user');
+    if (response.success && response.data) {
+      displayUser(response.data);
     }
   } catch (error) {
-    console.error('Failed to fetch admin user:', error);
+    console.error('Failed to fetch user:', error);
   }
 }
 
-function displayAdminUser(user) {
-  // Display full name
-  const usr = `${username.charAt(0).toUpperCase() + username.slice(1)}`;
-  document.getElementById('userName').textContent = usr;
+function displayUser(user) {
+  // Display username (capitalize first letter)
+  const username = user.username.charAt(0).toUpperCase() + user.username.slice(1);
+  document.getElementById('userName').textContent = username;
 
   // Display role (capitalize first letter)
-  const role = username.role.charAt(0).toUpperCase() + username.role.slice(1);
+  const role = user.role.charAt(0).toUpperCase() + user.role.slice(1);
   document.getElementById('userRole').textContent = role;
+
+  // Set user avatar initials
+  const initials = username.substring(0, 2).toUpperCase();
+  const userAvatar = document.getElementById('userAvatar');
+  if (userAvatar) {
+    userAvatar.textContent = initials;
+  }
+
+  // Update dropdown elements as well
+  const userFullNameDropdown = document.getElementById('userFullNameDropdown');
+  const userEmailDropdown = document.getElementById('userEmailDropdown');
+  if (userFullNameDropdown) {
+    userFullNameDropdown.textContent = username;
+  }
+  if (userEmailDropdown) {
+    userEmailDropdown.textContent = `${user.username}@foxcontrolhub.com`;
+  }
 }
 </script>
 </body>
