@@ -338,6 +338,38 @@
         margin: 0.25rem 0;
       }
     }
+
+    /* Item lookup modal styles */
+    .item-details {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 0.5rem 0;
+    }
+
+    .item-details strong {
+      color: var(--primary-color);
+    }
+
+    .quantity-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .quantity-controls input {
+      width: 80px;
+      text-align: center;
+    }
+
+    .quantity-actions {
+      margin-top: 1rem;
+    }
+
+    .quantity-actions .btn {
+      margin: 0.25rem;
+    }
   </style>
 </head>
 <body>
@@ -354,7 +386,7 @@
       <div class="nav-item me-3 d-none d-lg-block">
         <div class="input-group" style="width: 250px;">
           <input type="text" class="form-control form-control-sm" placeholder="Quick search..." id="topSearchInput">
-          <button class="btn btn-outline-secondary btn-sm" type="button">
+          <button class="btn btn-outline-secondary btn-sm" type="button" onclick="performQuickSearch()">
             <i class="bi bi-search"></i>
           </button>
         </div>
@@ -364,23 +396,18 @@
       <div class="nav-item dropdown me-3">
         <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
           <i class="bi bi-bell fs-5"></i>
-          <span class="notification-badge" id="notificationCount">2</span>
+          <span class="notification-badge" id="notificationCount" style="display: none;">0</span>
         </a>
         <div class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="width: 320px;">
           <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
             <h6 class="mb-0">Notifications</h6>
             <button class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">Mark all as read</button>
           </div>
-          <div class="notification-list" style="max-height: 300px; overflow-y: auto;">
-            <div class="notification-item notification-unread" data-id="1">
-              <div class="notification-title">Barcode Scanned</div>
-              <div class="notification-text">New item scanned: Product ABC123</div>
-              <div class="notification-time">5 minutes ago</div>
-            </div>
-            <div class="notification-item notification-unread" data-id="2">
-              <div class="notification-title">RFID Tag Detected</div>
-              <div class="notification-text">RFID tag read successfully: RF456789</div>
-              <div class="notification-time">15 minutes ago</div>
+          <div class="notification-list" id="notificationList" style="max-height: 300px; overflow-y: auto;">
+            <!-- Dynamic notifications will be loaded here -->
+            <div class="text-center py-3" id="noNotifications" style="display: none;">
+              <i class="bi bi-bell-slash text-muted fs-4"></i>
+              <div class="text-muted mt-2">No notifications yet</div>
             </div>
           </div>
           <div class="text-center py-2 border-top">
@@ -393,7 +420,7 @@
       <div class="nav-item dropdown me-3">
         <a class="nav-link position-relative" href="#" id="messageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
           <i class="bi bi-chat-dots fs-5"></i>
-          <span class="notification-badge" style="background-color: var(--success-color);">1</span>
+          <span class="notification-badge" style="background-color: var(--success-color);">2</span>
         </a>
         <div class="dropdown-menu dropdown-menu-end" aria-labelledby="messageDropdown" style="width: 300px;">
           <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
@@ -411,6 +438,16 @@
                 </div>
               </div>
             </div>
+            <div class="notification-item">
+              <div class="d-flex align-items-center">
+                <div class="user-avatar me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">SM</div>
+                <div class="flex-grow-1">
+                  <div class="notification-title">System Manager</div>
+                  <div class="notification-text">New barcode format detected</div>
+                  <div class="notification-time">2 hours ago</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -418,17 +455,17 @@
       <!-- User Profile -->
       <div class="nav-item dropdown">
         <a class="nav-link d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-          <div class="user-avatar me-2">JD</div>
+          <div class="user-avatar me-2" id="userAvatar">SC</div>
           <div class="d-none d-md-block">
-            <div style="font-size: 0.875rem; font-weight: 600; line-height: 1.2;">John Doe</div>
+            <div id="userName" style="font-size: 0.875rem; font-weight: 600; line-height: 1.2;">Scanner</div>
             <div style="font-size: 0.75rem; color: #6c757d; line-height: 1.2;">Scanner Operator</div>
           </div>
           <i class="bi bi-chevron-down ms-2"></i>
         </a>
         <div class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
           <div class="px-3 py-2 border-bottom">
-            <div class="fw-bold">John Doe</div>
-            <div class="text-muted small">john.doe@company.com</div>
+            <div class="fw-bold" id="userFullNameDropdown">Scanner Operator</div>
+            <div class="text-muted small" id="userEmailDropdown">scanner@foxcontrolhub.com</div>
           </div>
           <a class="dropdown-item" href="#" onclick="showProfileModal()">
             <i class="bi bi-person me-2"></i>My Profile
@@ -459,7 +496,7 @@
 <div class="container-fluid">
   <div class="row">
     <!-- Sidebar -->
-    <div class="col-lg-2 col-md-3 sidebar p-4">
+    <div class="col-lg-2 col-md-3 sidebar p-3">
       <nav class="nav flex-column">
         <a class="nav-link" href="Inventory.html"><i class="bi bi-box-seam me-2"></i>Inventory</a>
         <a class="nav-link active" href="Barcode.html"><i class="bi bi-upc-scan me-2"></i>Barcode</a>
@@ -472,7 +509,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="col-lg-10 col-md-9 p-4">
+    <div class="col-lg-10 col-md-9 p-3">
       <!-- Top Panel -->
       <div class="top-panel">
         <h4 class="fw-bold">Barcode/RFID Scanner</h4>
@@ -488,6 +525,9 @@
           </button>
           <button class="btn" onclick="clearScanHistory()">
             <i class="bi bi-trash"></i>Clear History
+          </button>
+          <button class="btn" onclick="loadInventoryData()">
+            <i class="bi bi-arrow-clockwise"></i>Refresh Data
           </button>
         </div>
       </div>
@@ -554,18 +594,329 @@
   </div>
 </div>
 
+<!-- Item Lookup Modal -->
+<div class="modal fade" id="itemLookupModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+        <h5 class="modal-title">Item Details</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="itemDetailsContent">
+          <!-- Item details will be loaded here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" onclick="updateInventoryQuantity()">Update Quantity</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal fade" id="settingsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+        <h5 class="modal-title">Scanner Settings</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-4">
+          <!-- Scanner Settings -->
+          <div class="col-12">
+            <h6 class="border-bottom pb-2 mb-3">Scanner Configuration</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Default Scanner Mode</label>
+                <select class="form-select" id="defaultScannerMode">
+                  <option value="barcode" selected>Barcode</option>
+                  <option value="rfid">RFID</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Scan Timeout (seconds)</label>
+                <input type="number" class="form-control" id="scanTimeout" value="30" min="10" max="120">
+              </div>
+              <div class="col-md-6">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="autoLookup" checked>
+                  <label class="form-check-label" for="autoLookup">
+                    Auto-lookup items after scan
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="playBeepSound" checked>
+                  <label class="form-check-label" for="playBeepSound">
+                    Play beep sound on successful scan
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Display Settings -->
+          <div class="col-12">
+            <h6 class="border-bottom pb-2 mb-3">Display Settings</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">History Display Limit</label>
+                <select class="form-select" id="historyLimit">
+                  <option value="50">50 items</option>
+                  <option value="100" selected>100 items</option>
+                  <option value="200">200 items</option>
+                  <option value="500">500 items</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Date Format</label>
+                <select class="form-select" id="dateFormat">
+                  <option value="mm/dd/yyyy">MM/DD/YYYY</option>
+                  <option value="dd/mm/yyyy" selected>DD/MM/YYYY</option>
+                  <option value="yyyy-mm-dd">YYYY-MM-DD</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+        <h5 class="modal-title">My Profile</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-4">
+          <div class="col-md-4 text-center">
+            <div class="user-avatar mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;" id="profileAvatar">SC</div>
+            <button class="btn btn-outline-primary btn-sm">Change Avatar</button>
+          </div>
+          <div class="col-md-8">
+            <form id="profileForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">First Name</label>
+                  <input type="text" class="form-control" value="Scanner" id="firstName">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Last Name</label>
+                  <input type="text" class="form-control" value="Operator" id="lastName">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Email</label>
+                  <input type="email" class="form-control" value="scanner@foxcontrolhub.com" id="email">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Phone</label>
+                  <input type="tel" class="form-control" value="+1 (555) 987-6543" id="phone">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Department</label>
+                  <select class="form-select" id="department">
+                    <option value="warehouse" selected>Warehouse Operations</option>
+                    <option value="inventory">Inventory Management</option>
+                    <option value="quality">Quality Control</option>
+                    <option value="shipping">Shipping & Receiving</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Bio</label>
+                  <textarea class="form-control" rows="3" id="bio">Experienced scanner operator specializing in barcode and RFID systems for inventory management.</textarea>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Activity Log Modal -->
+<div class="modal fade" id="activityModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+        <h5 class="modal-title">Scanning Activity Log</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Action</th>
+                <th>Code</th>
+                <th>Type</th>
+                <th>Item</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="activityLogBody">
+              <!-- Activity log will be populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" onclick="exportActivityLog()">Export Log</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+// Global variables
 let scanHistory = [];
+let inventoryData = [];
+let categoriesData = [];
+let warehousesData = [];
+let currentItem = null;
 let isScanning = false;
 let scannerMode = 'barcode'; // 'barcode' or 'rfid'
 let continuousMode = false;
+let scanTimeout = 30;
+let autoLookup = true;
+let playBeepSound = true;
+
+// API Helper Functions
+const API_BASE = '/api';
+
+async function apiCall(endpoint, options = {}) {
+  try {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('API call failed:', error);
+    throw error;
+  }
+}
 
 // Initialize scanner
 document.addEventListener('DOMContentLoaded', function() {
+  loadInitialData();
+  fetchUser();
+  loadNotifications();
+  loadNotificationCount();
   updateScanCount();
   focusInput();
 });
+
+// Load initial data from database
+async function loadInitialData() {
+  try {
+    showLoading(true);
+    const [inventoryResponse, categoriesResponse, warehousesResponse] = await Promise.all([
+      apiCall('/inventory'),
+      apiCall('/categories'),
+      apiCall('/warehouses')
+    ]);
+    
+    if (inventoryResponse.success) {
+      inventoryData = mapInventoryData(inventoryResponse.data);
+      showMessage('Inventory data loaded successfully');
+    }
+    
+    if (categoriesResponse.success) {
+      categoriesData = categoriesResponse.data;
+    }
+    
+    if (warehousesResponse.success) {
+      warehousesData = warehousesResponse.data;
+    }
+    
+  } catch (error) {
+    console.error('Error loading initial data:', error);
+    showMessage('Error loading data from database. Operating in offline mode.', 'warning');
+  } finally {
+    showLoading(false);
+  }
+}
+
+// Map raw inventory data to internal format
+function mapInventoryData(rawData) {
+  return rawData.map(item => ({
+    id: item.id,
+    itemCode: item.item_code,
+    productName: item.product_name,
+    unitOfMeasure: item.unit_of_measure,
+    buyPrice: item.buy_price,
+    sellPrice: item.sell_price,
+    location: item.location,
+    categoryId: item.category_id,
+    status: item.status,
+    warehouseId: item.warehouse_id,
+    totalQuantity: item.total_quantity,
+    updatedAt: item.updated_at
+  }));
+}
+
+function showLoading(show) {
+  const statusText = document.getElementById('statusText');
+  if (show) {
+    statusText.textContent = 'Loading data...';
+    updateStatus('scanning', 'Loading data...');
+  } else {
+    statusText.textContent = 'Ready to scan';
+    updateStatus('ready', 'Ready to scan');
+  }
+}
+
+function showMessage(message, type = 'info') {
+  // Create notification if needed
+  addNotification(message, type);
+  
+  // Show temporary toast-like message
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'success'} alert-dismissible fade show position-fixed`;
+  alertDiv.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+  alertDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  document.body.appendChild(alertDiv);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    if (alertDiv.parentNode) {
+      alertDiv.remove();
+    }
+  }, 5000);
+}
 
 function startBarcodeScanner() {
   scannerMode = 'barcode';
@@ -585,12 +936,12 @@ function startScanning() {
   document.getElementById('scannerArea').classList.add('active');
   focusInput();
   
-  // Simulate scanner activation
+  // Auto-stop scanning after timeout
   setTimeout(() => {
-    if (isScanning) {
-      updateStatus('ready', `${scannerMode.toUpperCase()} scanner ready`);
+    if (isScanning && !continuousMode) {
+      stopScanning();
     }
-  }, 2000);
+  }, scanTimeout * 1000);
 }
 
 function stopScanning() {
@@ -661,18 +1012,41 @@ function handleManualInput(event) {
   }
 }
 
-function processScan(code, type) {
+async function processScan(code, type) {
   const timestamp = new Date();
   const scanData = {
     id: Date.now(),
     code: code,
     type: type,
     timestamp: timestamp,
-    status: 'success'
+    status: 'success',
+    item: null
   };
+  
+  // Try to find item in inventory
+  if (inventoryData.length > 0) {
+    const foundItem = inventoryData.find(item => 
+      item.itemCode === code || 
+      item.id.toString() === code ||
+      `${item.itemCode}-${item.id}` === code
+    );
+    
+    if (foundItem) {
+      scanData.item = foundItem;
+      scanData.status = 'found';
+    } else {
+      scanData.status = 'not_found';
+    }
+  }
   
   // Add to history
   scanHistory.unshift(scanData);
+  
+  // Limit history size
+  const historyLimit = parseInt(document.getElementById('historyLimit')?.value || 100);
+  if (scanHistory.length > historyLimit) {
+    scanHistory = scanHistory.slice(0, historyLimit);
+  }
   
   // Show result
   showScanResult(scanData);
@@ -681,13 +1055,46 @@ function processScan(code, type) {
   updateScanHistory();
   updateScanCount();
   
-  // Play success sound (simulated)
-  playBeep();
+  // Auto-lookup if enabled
+  if (autoLookup && scanData.item) {
+    setTimeout(() => lookupItem(code), 1000);
+  }
+  
+  // Play success sound
+  if (playBeepSound) {
+    playBeep();
+  }
+  
+  // Log activity
+  logActivity('scan', code, type, scanData.item?.productName || 'Unknown', scanData.status);
 }
 
 function showScanResult(scanData) {
   const resultDiv = document.getElementById('scanResult');
   const contentDiv = document.getElementById('resultContent');
+  
+  let statusBadge, statusText, itemInfo = '';
+  
+  switch(scanData.status) {
+    case 'found':
+      statusBadge = '<span class="badge bg-success">Item Found</span>';
+      statusText = 'Item found in inventory';
+      itemInfo = `
+        <div class="mt-2">
+          <strong>Product:</strong> ${scanData.item.productName}<br>
+          <strong>Location:</strong> ${scanData.item.location}<br>
+          <strong>Quantity:</strong> ${scanData.item.totalQuantity}
+        </div>
+      `;
+      break;
+    case 'not_found':
+      statusBadge = '<span class="badge bg-warning">Not Found</span>';
+      statusText = 'Item not found in inventory';
+      break;
+    default:
+      statusBadge = '<span class="badge bg-info">Scanned</span>';
+      statusText = 'Code scanned successfully';
+  }
   
   contentDiv.innerHTML = `
     <div class="row">
@@ -695,23 +1102,29 @@ function showScanResult(scanData) {
         <strong>Code:</strong> ${scanData.code}<br>
         <strong>Type:</strong> ${scanData.type.toUpperCase()}<br>
         <strong>Time:</strong> ${scanData.timestamp.toLocaleTimeString()}
+        ${itemInfo}
       </div>
       <div class="col-md-6">
-        <strong>Status:</strong> <span class="badge bg-success">Success</span><br>
-        <strong>Action:</strong> 
-        <button class="btn btn-sm btn-primary" onclick="lookupItem('${scanData.code}')">
-          <i class="bi bi-search"></i> Lookup Item
-        </button>
+        <strong>Status:</strong> ${statusBadge}<br>
+        <small class="text-muted">${statusText}</small><br>
+        <div class="mt-2">
+          <button class="btn btn-sm btn-primary me-2" onclick="lookupItem('${scanData.code}')">
+            <i class="bi bi-search"></i> Lookup
+          </button>
+          ${scanData.item ? `<button class="btn btn-sm btn-success" onclick="quickUpdate('${scanData.code}')">
+            <i class="bi bi-pencil"></i> Quick Update
+          </button>` : ''}
+        </div>
       </div>
     </div>
   `;
   
   resultDiv.style.display = 'block';
   
-  // Auto-hide after 5 seconds
+  // Auto-hide after 10 seconds
   setTimeout(() => {
     resultDiv.style.display = 'none';
-  }, 5000);
+  }, 10000);
 }
 
 function updateScanHistory() {
@@ -727,28 +1140,50 @@ function updateScanHistory() {
     return;
   }
   
-  historyDiv.innerHTML = scanHistory.map(scan => `
-    <div class="scan-item ${scan.type}" data-type="${scan.type}">
-      <div class="d-flex justify-content-between align-items-start">
-        <div>
-          <strong>${scan.code}</strong>
-          <br>
-          <small class="text-muted">
-            <i class="bi bi-${scan.type === 'barcode' ? 'upc-scan' : 'broadcast'}"></i>
-            ${scan.type.toUpperCase()} • ${scan.timestamp.toLocaleString()}
-          </small>
-        </div>
-        <div>
-          <button class="btn btn-sm btn-outline-primary" onclick="lookupItem('${scan.code}')">
-            <i class="bi bi-search"></i>
-          </button>
-          <button class="btn btn-sm btn-outline-danger" onclick="removeScan(${scan.id})">
-            <i class="bi bi-trash"></i>
-          </button>
+  historyDiv.innerHTML = scanHistory.map(scan => {
+    let statusIcon, statusClass;
+    
+    switch(scan.status) {
+      case 'found':
+        statusIcon = '<i class="bi bi-check-circle-fill text-success"></i>';
+        statusClass = 'border-success';
+        break;
+      case 'not_found':
+        statusIcon = '<i class="bi bi-exclamation-triangle-fill text-warning"></i>';
+        statusClass = 'border-warning';
+        break;
+      default:
+        statusIcon = '<i class="bi bi-info-circle-fill text-info"></i>';
+        statusClass = '';
+    }
+    
+    return `
+      <div class="scan-item ${scan.type} ${statusClass}" data-type="${scan.type}">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center mb-1">
+              ${statusIcon}
+              <strong class="ms-2">${scan.code}</strong>
+              ${scan.item ? `<span class="badge bg-info ms-2">${scan.item.productName}</span>` : ''}
+            </div>
+            <small class="text-muted">
+              <i class="bi bi-${scan.type === 'barcode' ? 'upc-scan' : 'broadcast'}"></i>
+              ${scan.type.toUpperCase()} • ${scan.timestamp.toLocaleString()}
+              ${scan.item ? ` • Qty: ${scan.item.totalQuantity}` : ''}
+            </small>
+          </div>
+          <div>
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="lookupItem('${scan.code}')" title="Lookup">
+              <i class="bi bi-search"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="removeScan(${scan.id})" title="Remove">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 function updateScanCount() {
@@ -775,9 +1210,153 @@ function filterHistory(type) {
   });
 }
 
-function lookupItem(code) {
-  // Simulate item lookup
-  alert(`Looking up item with code: ${code}\n\nThis would typically:\n• Search inventory database\n• Display item details\n• Show stock levels\n• Allow inventory actions`);
+async function lookupItem(code) {
+  try {
+    // First try to find in local data
+    let item = inventoryData.find(item => 
+      item.itemCode === code || 
+      item.id.toString() === code ||
+      `${item.itemCode}-${item.id}` === code
+    );
+    
+    // If not found locally, try API
+    if (!item && inventoryData.length > 0) {
+      try {
+        const response = await apiCall(`/inventory/search?code=${encodeURIComponent(code)}`);
+        if (response.success && response.data) {
+          item = mapInventoryData([response.data])[0];
+        }
+      } catch (error) {
+        console.log('API search failed, using local data only');
+      }
+    }
+    
+    if (item) {
+      currentItem = item;
+      showItemDetails(item);
+    } else {
+      showMessage(`Item with code "${code}" not found in inventory.`, 'warning');
+    }
+  } catch (error) {
+    console.error('Error looking up item:', error);
+    showMessage('Error looking up item', 'error');
+  }
+}
+
+function showItemDetails(item) {
+  const modal = new bootstrap.Modal(document.getElementById('itemLookupModal'));
+  const content = document.getElementById('itemDetailsContent');
+  
+  // Get category and warehouse names
+  const category = categoriesData.find(c => c.category_id === item.categoryId);
+  const warehouse = warehousesData.find(w => w.warehouse_id === item.warehouseId);
+  
+  content.innerHTML = `
+    <div class="item-details">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <strong>Item Code:</strong> ${item.itemCode}<br>
+          <strong>Product Name:</strong> ${item.productName}<br>
+          <strong>Status:</strong> <span class="badge ${item.status === 'active' ? 'bg-success' : 'bg-danger'}">${item.status}</span>
+        </div>
+        <div class="col-md-6">
+          <strong>Current Quantity:</strong> ${item.totalQuantity} ${item.unitOfMeasure}<br>
+          <strong>Location:</strong> ${item.location}<br>
+          <strong>Buy Price:</strong> ₱${item.buyPrice}
+        </div>
+        <div class="col-md-6">
+          <strong>Category:</strong> ${category?.category_name || 'N/A'}<br>
+          <strong>Warehouse:</strong> ${warehouse?.warehouse_name || 'N/A'}
+        </div>
+        <div class="col-md-6">
+          <strong>Sell Price:</strong> ₱${item.sellPrice || 'N/A'}<br>
+          <strong>Last Updated:</strong> ${new Date(item.updatedAt).toLocaleString()}
+        </div>
+      </div>
+      
+      <div class="quantity-controls">
+        <label class="form-label">Update Quantity:</label>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-outline-secondary btn-sm" onclick="adjustQuantity(-1)">-</button>
+          <input type="number" class="form-control" id="newQuantity" value="${item.totalQuantity}" min="0" style="width: 100px;">
+          <button class="btn btn-outline-secondary btn-sm" onclick="adjustQuantity(1)">+</button>
+          <span class="text-muted">${item.unitOfMeasure}</span>
+        </div>
+      </div>
+      
+      <div class="quantity-actions">
+        <button class="btn btn-sm btn-success" onclick="setQuickQuantity(0)">Set to 0</button>
+        <button class="btn btn-sm btn-warning" onclick="setQuickQuantity(10)">+10</button>
+        <button class="btn btn-sm btn-info" onclick="setQuickQuantity(50)">+50</button>
+        <button class="btn btn-sm btn-primary" onclick="setQuickQuantity(100)">+100</button>
+      </div>
+    </div>
+  `;
+  
+  modal.show();
+}
+
+function adjustQuantity(delta) {
+  const input = document.getElementById('newQuantity');
+  const currentValue = parseInt(input.value) || 0;
+  const newValue = Math.max(0, currentValue + delta);
+  input.value = newValue;
+}
+
+function setQuickQuantity(value) {
+  const input = document.getElementById('newQuantity');
+  if (value === 0) {
+    input.value = 0;
+  } else {
+    const currentValue = parseInt(input.value) || 0;
+    input.value = currentValue + value;
+  }
+}
+
+async function updateInventoryQuantity() {
+  if (!currentItem) return;
+  
+  const newQuantity = parseInt(document.getElementById('newQuantity').value);
+  if (isNaN(newQuantity) || newQuantity < 0) {
+    showMessage('Please enter a valid quantity', 'error');
+    return;
+  }
+  
+  try {
+    const response = await apiCall(`/inventory/${currentItem.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        total_quantity: newQuantity
+      })
+    });
+    
+    if (response.success) {
+      // Update local data
+      currentItem.totalQuantity = newQuantity;
+      const index = inventoryData.findIndex(item => item.id === currentItem.id);
+      if (index !== -1) {
+        inventoryData[index].totalQuantity = newQuantity;
+      }
+      
+      showMessage(`Quantity updated successfully for ${currentItem.productName}`, 'success');
+      bootstrap.Modal.getInstance(document.getElementById('itemLookupModal')).hide();
+      
+      // Log activity
+      logActivity('update', currentItem.itemCode, 'quantity', currentItem.productName, 'success');
+      
+      // Refresh notifications
+      refreshNotifications();
+    } else {
+      showMessage(response.message || 'Failed to update quantity', 'error');
+    }
+  } catch (error) {
+    console.error('Error updating quantity:', error);
+    showMessage('Error updating quantity', 'error');
+  }
+}
+
+function quickUpdate(code) {
+  lookupItem(code);
 }
 
 function removeScan(id) {
@@ -793,9 +1372,9 @@ function exportScanHistory() {
   }
   
   const csvContent = "data:text/csv;charset=utf-8," 
-    + "Code,Type,Timestamp,Status\n"
+    + "Code,Type,Timestamp,Status,Item,Quantity\n"
     + scanHistory.map(scan => 
-        `${scan.code},${scan.type},${scan.timestamp.toISOString()},${scan.status}`
+        `${scan.code},${scan.type},${scan.timestamp.toISOString()},${scan.status},${scan.item?.productName || 'N/A'},${scan.item?.totalQuantity || 'N/A'}`
       ).join("\n");
   
   const encodedUri = encodeURI(csvContent);
@@ -813,6 +1392,7 @@ function clearScanHistory() {
     updateScanHistory();
     updateScanCount();
     document.getElementById('scanResult').style.display = 'none';
+    showMessage('Scan history cleared', 'info');
   }
 }
 
@@ -823,22 +1403,25 @@ function focusInput() {
 }
 
 function playBeep() {
-  // Create a simple beep sound
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  const oscillator = audioContext.createOscillator();
-  const gainNode = audioContext.createGain();
-  
-  oscillator.connect(gainNode);
-  gainNode.connect(audioContext.destination);
-  
-  oscillator.frequency.value = 800;
-  oscillator.type = 'square';
-  
-  gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-  
-  oscillator.start(audioContext.currentTime);
-  oscillator.stop(audioContext.currentTime + 0.1);
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 800;
+    oscillator.type = 'square';
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.1);
+  } catch (error) {
+    console.log('Could not play beep sound');
+  }
 }
 
 // Auto-focus input when page becomes visible
@@ -847,6 +1430,395 @@ document.addEventListener('visibilitychange', function() {
     focusInput();
   }
 });
+
+// Top Navigation Functions
+function performQuickSearch() {
+  const searchTerm = document.getElementById('topSearchInput').value.trim();
+  if (searchTerm) {
+    // Simulate scan
+    processScan(searchTerm, 'manual');
+    document.getElementById('topSearchInput').value = '';
+  }
+}
+
+async function fetchUser() {
+  try {
+    const response = await apiCall('/user');
+    if (response.success && response.data) {
+      displayUser(response.data);
+    }
+  } catch (error) {
+    console.error('Failed to fetch user:', error);
+    // Use default user data
+    displayUser({ username: 'scanner' });
+  }
+}
+
+function displayUser(user) {
+  const username = user.username.charAt(0).toUpperCase() + user.username.slice(1);
+  document.getElementById('userName').textContent = username;
+
+  const initials = username.substring(0, 2).toUpperCase();
+  const userAvatar = document.getElementById('userAvatar');
+  if (userAvatar) {
+    userAvatar.textContent = initials;
+  }
+
+  const profileAvatar = document.getElementById('profileAvatar');
+  if (profileAvatar) {
+    profileAvatar.textContent = initials;
+  }
+
+  const userFullNameDropdown = document.getElementById('userFullNameDropdown');
+  const userEmailDropdown = document.getElementById('userEmailDropdown');
+  if (userFullNameDropdown) {
+    userFullNameDropdown.textContent = username;
+  }
+  if (userEmailDropdown) {
+    userEmailDropdown.textContent = `${user.username}@foxcontrolhub.com`;
+  }
+}
+
+// Notification functions
+async function loadNotifications() {
+  try {
+    const response = await apiCall('/notifications');
+    if (response.success) {
+      displayNotifications(response.data);
+    }
+  } catch (error) {
+    console.error('Failed to load notifications:', error);
+  }
+}
+
+async function loadNotificationCount() {
+  try {
+    const response = await apiCall('/notifications/count');
+    if (response.success) {
+      updateNotificationCount(response.count);
+    }
+  } catch (error) {
+    console.error('Failed to load notification count:', error);
+  }
+}
+
+function displayNotifications(notifications) {
+  const notificationList = document.getElementById('notificationList');
+  const noNotifications = document.getElementById('noNotifications');
+  
+  if (!notifications || notifications.length === 0) {
+    noNotifications.style.display = 'block';
+    return;
+  }
+  
+  noNotifications.style.display = 'none';
+  notificationList.innerHTML = '';
+  
+  notifications.forEach(notification => {
+    const notificationItem = document.createElement('div');
+    notificationItem.className = `notification-item ${!notification.is_read ? 'notification-unread' : ''}`;
+    notificationItem.setAttribute('data-id', notification.id);
+    
+    const timeAgo = formatTimeAgo(new Date(notification.created_at));
+    const icon = getNotificationIcon(notification.type);
+    
+    notificationItem.innerHTML = `
+      <div class="d-flex align-items-start">
+        <div class="me-2 mt-1">${icon}</div>
+        <div class="flex-grow-1" onclick="markNotificationAsRead(${notification.id})">
+          <div class="notification-title">${notification.title}</div>
+          <div class="notification-text">${notification.message}</div>
+          <div class="notification-time">${timeAgo}</div>
+        </div>
+      </div>
+    `;
+    
+    notificationList.appendChild(notificationItem);
+  });
+}
+
+function getNotificationIcon(type) {
+  switch (type) {
+    case 'success':
+      return '<i class="bi bi-check-circle-fill text-success"></i>';
+    case 'warning':
+      return '<i class="bi bi-exclamation-triangle-fill text-warning"></i>';
+    case 'error':
+      return '<i class="bi bi-x-circle-fill text-danger"></i>';
+    case 'info':
+    default:
+      return '<i class="bi bi-info-circle-fill text-primary"></i>';
+  }
+}
+
+function formatTimeAgo(date) {
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
+  
+  if (diffInSeconds < 60) {
+    return 'Just now';
+  } else if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  } else if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  } else {
+    const days = Math.floor(diffInSeconds / 86400);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  }
+}
+
+function updateNotificationCount(count) {
+  const notificationCount = document.getElementById('notificationCount');
+  if (count > 0) {
+    notificationCount.textContent = count;
+    notificationCount.style.display = 'flex';
+  } else {
+    notificationCount.style.display = 'none';
+  }
+}
+
+async function markNotificationAsRead(id) {
+  try {
+    const response = await apiCall(`/notifications/${id}/read`, {
+      method: 'POST'
+    });
+    if (response.success) {
+      const notificationItem = document.querySelector(`[data-id="${id}"]`);
+      if (notificationItem) {
+        notificationItem.classList.remove('notification-unread');
+      }
+      loadNotificationCount();
+    }
+  } catch (error) {
+    console.error('Failed to mark notification as read:', error);
+  }
+}
+
+async function markAllAsRead() {
+  try {
+    const response = await apiCall('/notifications/read-all', {
+      method: 'POST'
+    });
+    if (response.success) {
+      const unreadNotifications = document.querySelectorAll('.notification-unread');
+      unreadNotifications.forEach(notification => {
+        notification.classList.remove('notification-unread');
+      });
+      updateNotificationCount(0);
+    }
+  } catch (error) {
+    console.error('Failed to mark all notifications as read:', error);
+  }
+}
+
+function addNotification(message, type) {
+  // Add to notifications (would normally be done server-side)
+  try {
+    apiCall('/notifications', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: 'Scanner Activity',
+        message: message,
+        type: type
+      })
+    });
+  } catch (error) {
+    console.log('Could not create notification');
+  }
+}
+
+function refreshNotifications() {
+  loadNotifications();
+  loadNotificationCount();
+}
+
+// Modal functions
+function showSettingsModal() {
+  new bootstrap.Modal(document.getElementById('settingsModal')).show();
+}
+
+function showProfileModal() {
+  new bootstrap.Modal(document.getElementById('profileModal')).show();
+}
+
+function showActivityLog() {
+  populateActivityLog();
+  new bootstrap.Modal(document.getElementById('activityModal')).show();
+}
+
+function saveSettings() {
+  // Get settings data
+  scanTimeout = parseInt(document.getElementById('scanTimeout').value) || 30;
+  autoLookup = document.getElementById('autoLookup').checked;
+  playBeepSound = document.getElementById('playBeepSound').checked;
+  
+  // Save to localStorage
+  localStorage.setItem('scannerSettings', JSON.stringify({
+    scanTimeout,
+    autoLookup,
+    playBeepSound,
+    defaultScannerMode: document.getElementById('defaultScannerMode').value,
+    historyLimit: document.getElementById('historyLimit').value,
+    dateFormat: document.getElementById('dateFormat').value
+  }));
+  
+  showMessage('Settings saved successfully!', 'success');
+  bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide();
+}
+
+function saveProfile() {
+  const profileData = {
+    firstName: document.getElementById('firstName').value,
+    lastName: document.getElementById('lastName').value,
+    email: document.getElementById('email').value,
+    phone: document.getElementById('phone').value,
+    department: document.getElementById('department').value,
+    bio: document.getElementById('bio').value
+  };
+  
+  // Save to localStorage (in real app, would save to server)
+  localStorage.setItem('userProfile', JSON.stringify(profileData));
+  
+  showMessage('Profile updated successfully!', 'success');
+  bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
+}
+
+async function logout() {
+  if (confirm('Are you sure you want to sign out?')) {
+    try {
+      const response = await fetch('/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        window.location.href = '/loginpage.html';
+      } else {
+        alert('Error signing out. Please try again.');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      window.location.href = '/loginpage.html';
+    }
+  }
+}
+
+// Activity logging
+function logActivity(action, code, type, item, status) {
+  const activity = {
+    timestamp: new Date(),
+    action: action,
+    code: code,
+    type: type,
+    item: item,
+    status: status
+  };
+  
+  // Save to localStorage (in real app, would save to server)
+  let activityLog = JSON.parse(localStorage.getItem('activityLog') || '[]');
+  activityLog.unshift(activity);
+  
+  // Keep only last 1000 activities
+  if (activityLog.length > 1000) {
+    activityLog = activityLog.slice(0, 1000);
+  }
+  
+  localStorage.setItem('activityLog', JSON.stringify(activityLog));
+}
+
+function populateActivityLog() {
+  const tbody = document.getElementById('activityLogBody');
+  const activityLog = JSON.parse(localStorage.getItem('activityLog') || '[]');
+  
+  tbody.innerHTML = activityLog.map(activity => `
+    <tr>
+      <td>${new Date(activity.timestamp).toLocaleString()}</td>
+      <td>
+        <span class="badge ${
+          activity.action === 'scan' ? 'bg-info' :
+          activity.action === 'update' ? 'bg-warning' :
+          'bg-secondary'
+        }">${activity.action}</span>
+      </td>
+      <td>${activity.code}</td>
+      <td>${activity.type}</td>
+      <td>${activity.item}</td>
+      <td>
+        <span class="badge ${
+          activity.status === 'success' || activity.status === 'found' ? 'bg-success' :
+          activity.status === 'not_found' ? 'bg-warning' :
+          'bg-danger'
+        }">${activity.status}</span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function exportActivityLog() {
+  const activityLog = JSON.parse(localStorage.getItem('activityLog') || '[]');
+  
+  if (activityLog.length === 0) {
+    alert('No activity log to export.');
+    return;
+  }
+  
+  const csvContent = "data:text/csv;charset=utf-8," 
+    + "Timestamp,Action,Code,Type,Item,Status\n"
+    + activityLog.map(activity => 
+        `${activity.timestamp},${activity.action},${activity.code},${activity.type},${activity.item},${activity.status}`
+      ).join("\n");
+  
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `activity_log_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Load settings on startup
+document.addEventListener('DOMContentLoaded', function() {
+  const settings = JSON.parse(localStorage.getItem('scannerSettings') || '{}');
+  
+  if (settings.scanTimeout) {
+    scanTimeout = settings.scanTimeout;
+    document.getElementById('scanTimeout').value = scanTimeout;
+  }
+  
+  if (settings.autoLookup !== undefined) {
+    autoLookup = settings.autoLookup;
+    document.getElementById('autoLookup').checked = autoLookup;
+  }
+  
+  if (settings.playBeepSound !== undefined) {
+    playBeepSound = settings.playBeepSound;
+    document.getElementById('playBeepSound').checked = playBeepSound;
+  }
+  
+  if (settings.defaultScannerMode) {
+    scannerMode = settings.defaultScannerMode;
+    updateScannerMode();
+  }
+});
+
+// Manual data refresh function
+async function loadInventoryData() {
+  try {
+    showMessage('Refreshing inventory data...', 'info');
+    await loadInitialData();
+    showMessage('Inventory data refreshed successfully!', 'success');
+  } catch (error) {
+    console.error('Error refreshing inventory data:', error);
+    showMessage('Error refreshing inventory data', 'error');
+  }
+}
 </script>
 </body>
 </html>
