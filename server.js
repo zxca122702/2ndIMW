@@ -1,7 +1,16 @@
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
-const { initializeDatabase, authenticateUser, sql } = require('./database');
+const { 
+  initializeDatabase, 
+  authenticateUser, 
+  sql,
+  createNotification,
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  getUnreadNotificationCount
+} = require('./database');
 const {
   initializeInventoryTable,
   getAllInventoryItems,
@@ -41,7 +50,7 @@ const requireAuth = (req, res, next) => {
   if (req.session && req.session.user) {
     return next();
   } else {
-    return res.redirect('/login.html');
+    return res.redirect('/loginpage.html');
   }
 };
 
@@ -52,7 +61,7 @@ app.get('/', (req, res) => {
   if (req.session && req.session.user) {
     res.redirect('/inventory.html');
   } else {
-    res.redirect('/login.html');
+    res.redirect('/loginpage.html');
   }
 });
 
@@ -61,7 +70,15 @@ app.get('/login.html', (req, res) => {
   if (req.session && req.session.user) {
     res.redirect('/inventory.html');
   } else {
-    res.sendFile(path.join(__dirname, 'login.html'));
+    res.sendFile(path.join(__dirname, 'loginpage.html'));
+  }
+});
+
+app.get('/loginpage.html', (req, res) => {
+  if (req.session && req.session.user) {
+    res.redirect('/inventory.html');
+  } else {
+    res.sendFile(path.join(__dirname, 'loginpage.html'));
   }
 });
 
@@ -70,7 +87,15 @@ app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   
   try {
-    const user = await authenticateUser(username, password);
+    let user;
+    try {
+      user = await authenticateUser(username, password);
+    } catch (dbError) {
+      // Mock authentication if database is not available
+      if (username === 'admin' && password === 'admin') {
+        user = { id: 1, username: 'admin', role: 'admin' };
+      }
+    }
     
     if (user) {
       req.session.user = user;
@@ -126,18 +151,75 @@ app.get('/warehouselayandopti.html', requireAuth, (req, res) => {
 // API route to get current user info
 app.get('/api/user', requireAuth, (req, res) => {
   res.json({
-    username: req.session.user.username,
-    role: req.session.user.role
+    success: true,
+    data: {
+      username: req.session.user.username,
+      role: req.session.user.role
+    }
   });
 });
 
-// Express route
-app.get('/api/user', requireAuth, (req, res) => {
-  // Only return admin user info
-  if (req.user && req.user.role === 'admin') {
-    res.json({ success: true, data: req.user });
-  } else {
-    res.status(403).json({ success: false, message: 'Forbidden' });
+// Notification API endpoints
+app.get('/api/notifications', requireAuth, async (req, res) => {
+  try {
+    const notifications = await getNotifications(20);
+    res.json({ success: true, data: notifications });
+  } catch (error) {
+    console.error('Get notifications error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch notifications' });
+  }
+});
+
+app.get('/api/notifications/count', requireAuth, async (req, res) => {
+  try {
+    const count = await getUnreadNotificationCount();
+    res.json({ success: true, count: count });
+  } catch (error) {
+    console.error('Get notification count error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch notification count' });
+  }
+});
+
+app.post('/api/notifications/:id/read', requireAuth, async (req, res) => {
+  try {
+    const success = await markNotificationAsRead(req.params.id);
+    if (success) {
+      res.json({ success: true, message: 'Notification marked as read' });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to mark notification as read' });
+    }
+  } catch (error) {
+    console.error('Mark notification as read error:', error);
+    res.status(500).json({ success: false, message: 'Failed to mark notification as read' });
+  }
+});
+
+app.post('/api/notifications/read-all', requireAuth, async (req, res) => {
+  try {
+    const success = await markAllNotificationsAsRead();
+    if (success) {
+      res.json({ success: true, message: 'All notifications marked as read' });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to mark all notifications as read' });
+    }
+  } catch (error) {
+    console.error('Mark all notifications as read error:', error);
+    res.status(500).json({ success: false, message: 'Failed to mark all notifications as read' });
+  }
+});
+
+// Test route to create a notification
+app.post('/api/test-notification', requireAuth, async (req, res) => {
+  try {
+    const notification = await createNotification(
+      'Test Notification',
+      'This is a test notification to verify the system is working',
+      'info'
+    );
+    res.json({ success: true, message: 'Test notification created', data: notification });
+  } catch (error) {
+    console.error('Test notification error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create test notification' });
   }
 });
 
@@ -189,27 +271,63 @@ app.get('/api/inventory/:id', requireAuth, async (req, res) => {
 app.post('/api/inventory', requireAuth, async (req, res) => {
   try {
     const newItem = await createInventoryItem(req.body);
+    
+    // Create notification for successful item addition
+    try {
+      await createNotification(
+        'Item Added Successfully',
+        `${newItem.name} has been added to inventory with SKU: ${newItem.sku}`,
+        'success'
+      );
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+    }
+    
     res.json({ success: true, message: 'Item inserted successfully', data: newItem });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to insert item' });
   }
 });
 
-// API: Update existing inventory item
+// API: Delete multiple inventory items
 app.post('/api/inventory/delete-multiple', requireAuth, async (req, res) => {
   try {
     const { ids } = req.body;
     await deleteMultipleInventoryItems(ids);
+    
+    // Create notification for successful item deletion
+    try {
+      await createNotification(
+        'Items Deleted Successfully',
+        `${ids.length} item(s) have been deleted from inventory`,
+        'warning'
+      );
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+    }
+    
     res.json({ success: true, message: 'Items deleted successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to delete items' });
   }
 });
 
-// API: Delete inventory item
+// API: Update inventory item
 app.put('/api/inventory/:id', requireAuth, async (req, res) => {
   try {
     const updatedItem = await updateInventoryItem(req.params.id, req.body);
+    
+    // Create notification for successful item update
+    try {
+      await createNotification(
+        'Item Updated Successfully',
+        `${updatedItem.name} (SKU: ${updatedItem.sku}) has been updated in inventory`,
+        'info'
+      );
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+    }
+    
     res.json({ success: true, message: 'Item updated successfully', data: updatedItem });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to update item' });
@@ -249,14 +367,19 @@ app.get('/api/test-inventory', async (req, res) => {
 // Initialize database and start server
 const startServer = async () => {
   try {
-    await initializeDatabase();
+    // Try to initialize database, but don't fail if it doesn't work
+    try {
+      await initializeDatabase();
+      console.log(`🗄️ Database: Connected to Neon PostgreSQL`);
+    } catch (dbError) {
+      console.log(`⚠️ Database connection failed, running in mock mode`);
+    }
     
     app.listen(PORT, () => {
       console.log(`🚀 Fox Control Hub server running on http://localhost:${PORT}`);
       console.log(`📝 Default login credentials:`);
       console.log(`   Username: admin`);
       console.log(`   Password: admin`);
-      console.log(`🗄️ Database: Connected to Neon PostgreSQL`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

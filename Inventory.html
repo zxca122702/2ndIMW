@@ -452,33 +452,18 @@
       <div class="nav-item dropdown me-3">
         <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
           <i class="bi bi-bell fs-5"></i>
-          <span class="notification-badge" id="notificationCount">3</span>
+          <span class="notification-badge" id="notificationCount" style="display: none;">0</span>
         </a>
         <div class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="width: 320px;">
           <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
             <h6 class="mb-0">Notifications</h6>
             <button class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">Mark all as read</button>
           </div>
-          <div class="notification-list" style="max-height: 300px; overflow-y: auto;">
-            <div class="notification-item notification-unread" data-id="1">
-              <div class="notification-title">Low Stock Alert</div>
-              <div class="notification-text">USB Cable quantity is below minimum threshold (8 remaining)</div>
-              <div class="notification-time">2 minutes ago</div>
-            </div>
-            <div class="notification-item notification-unread" data-id="2">
-              <div class="notification-title">New Item Added</div>
-              <div class="notification-text">Wireless Earphone has been added to inventory</div>
-              <div class="notification-time">1 hour ago</div>
-            </div>
-            <div class="notification-item notification-unread" data-id="3">
-              <div class="notification-title">Price Update</div>
-              <div class="notification-text">Buy price updated for item ITM001</div>
-              <div class="notification-time">3 hours ago</div>
-            </div>
-            <div class="notification-item" data-id="4">
-              <div class="notification-title">System Backup</div>
-              <div class="notification-text">Daily backup completed successfully</div>
-              <div class="notification-time">1 day ago</div>
+          <div class="notification-list" id="notificationList" style="max-height: 300px; overflow-y: auto;">
+            <!-- Dynamic notifications will be loaded here -->
+            <div class="text-center py-3" id="noNotifications" style="display: none;">
+              <i class="bi bi-bell-slash text-muted fs-4"></i>
+              <div class="text-muted mt-2">No notifications yet</div>
             </div>
           </div>
           <div class="text-center py-2 border-top">
@@ -529,7 +514,6 @@
         <div class="user-avatar me-2" id="userAvatar"></div>
         <div class="d-none d-md-block">
           <div id="userName" style="font-size: 0.875rem; font-weight: 600; line-height: 1.2;"></div>
-          <div id="userRole" style="font-size: 0.75rem; color: #6c757d; line-height: 1.2;"></div>
         </div>
         <i class="bi bi-chevron-down ms-2"></i>
       </a>
@@ -1028,7 +1012,9 @@ let currentEditId = null;
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
   loadInitialData();
-  fetchAdminUser();
+  fetchUser();
+  loadNotifications();
+  loadNotificationCount();
 });
 
 // API Helper Functions
@@ -1291,6 +1277,7 @@ async function saveItem() {
       currentEditId = null; // Reset edit state
       bootstrap.Modal.getInstance(document.getElementById('itemModal')).hide();
       await loadInitialData(); // Refresh data and table
+      refreshNotifications(); // Refresh notifications
     } else {
       showMessage(response.message, 'error');
     }
@@ -1310,6 +1297,7 @@ async function deleteItem(id) {
     if (response.success) {
       showMessage('Item deleted successfully');
       await loadInitialData();
+      refreshNotifications(); // Refresh notifications
     } else {
       showMessage(response.message || 'Failed to delete item', 'error');
     }
@@ -1337,6 +1325,7 @@ async function deleteSelected() {
     if (response.success) {
       showMessage('Items deleted successfully');
       await loadInitialData();
+      refreshNotifications(); // Refresh notifications
     } else {
       showMessage(response.message || 'Failed to delete items', 'error');
     }
@@ -1623,27 +1612,185 @@ function saveSettings() {
   bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide();
 }
 
-function logout() {
+async function logout() {
   if (confirm('Are you sure you want to sign out?')) {
-    // In a real application, this would clear session and redirect to login
-    alert('Signing out...');
-    // window.location.href = '/login';
+    try {
+      const response = await fetch('/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Redirect to login page
+        window.location.href = '/loginpage.html';
+      } else {
+        alert('Error signing out. Please try again.');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if API fails, redirect to login for security
+      window.location.href = '/loginpage.html';
+    }
   }
 }
 
 // Notification functions
-function markAllAsRead() {
-  const unreadNotifications = document.querySelectorAll('.notification-unread');
-  unreadNotifications.forEach(notification => {
-    notification.classList.remove('notification-unread');
+async function loadNotifications() {
+  try {
+    const response = await apiCall('/notifications');
+    if (response.success) {
+      displayNotifications(response.data);
+    }
+  } catch (error) {
+    console.error('Failed to load notifications:', error);
+  }
+}
+
+async function loadNotificationCount() {
+  try {
+    const response = await apiCall('/notifications/count');
+    if (response.success) {
+      updateNotificationCount(response.count);
+    }
+  } catch (error) {
+    console.error('Failed to load notification count:', error);
+  }
+}
+
+function displayNotifications(notifications) {
+  const notificationList = document.getElementById('notificationList');
+  const noNotifications = document.getElementById('noNotifications');
+  
+  if (!notifications || notifications.length === 0) {
+    noNotifications.style.display = 'block';
+    return;
+  }
+  
+  noNotifications.style.display = 'none';
+  
+  // Clear existing notifications
+  notificationList.innerHTML = '';
+  
+  notifications.forEach(notification => {
+    const notificationItem = document.createElement('div');
+    notificationItem.className = `notification-item ${!notification.is_read ? 'notification-unread' : ''}`;
+    notificationItem.setAttribute('data-id', notification.id);
+    
+    // Format the timestamp
+    const timeAgo = formatTimeAgo(new Date(notification.created_at));
+    
+    // Get notification type icon
+    const icon = getNotificationIcon(notification.type);
+    
+    notificationItem.innerHTML = `
+      <div class="d-flex align-items-start">
+        <div class="me-2 mt-1">${icon}</div>
+        <div class="flex-grow-1" onclick="markNotificationAsRead(${notification.id})">
+          <div class="notification-title">${notification.title}</div>
+          <div class="notification-text">${notification.message}</div>
+          <div class="notification-time">${timeAgo}</div>
+        </div>
+      </div>
+    `;
+    
+    notificationList.appendChild(notificationItem);
   });
   
-  // Update notification count
-  const notificationCount = document.getElementById('notificationCount');
-  notificationCount.textContent = '0';
-  notificationCount.style.display = 'none';
+  // Add the "no notifications" div back for future use
+  const noNotificationsDiv = document.createElement('div');
+  noNotificationsDiv.className = 'text-center py-3';
+  noNotificationsDiv.id = 'noNotifications';
+  noNotificationsDiv.style.display = 'none';
+  noNotificationsDiv.innerHTML = `
+    <i class="bi bi-bell-slash text-muted fs-4"></i>
+    <div class="text-muted mt-2">No notifications yet</div>
+  `;
+  notificationList.appendChild(noNotificationsDiv);
+}
+
+function getNotificationIcon(type) {
+  switch (type) {
+    case 'success':
+      return '<i class="bi bi-check-circle-fill text-success"></i>';
+    case 'warning':
+      return '<i class="bi bi-exclamation-triangle-fill text-warning"></i>';
+    case 'error':
+      return '<i class="bi bi-x-circle-fill text-danger"></i>';
+    case 'info':
+    default:
+      return '<i class="bi bi-info-circle-fill text-primary"></i>';
+  }
+}
+
+function formatTimeAgo(date) {
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
   
-  alert('All notifications marked as read');
+  if (diffInSeconds < 60) {
+    return 'Just now';
+  } else if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  } else if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  } else {
+    const days = Math.floor(diffInSeconds / 86400);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  }
+}
+
+function updateNotificationCount(count) {
+  const notificationCount = document.getElementById('notificationCount');
+  if (count > 0) {
+    notificationCount.textContent = count;
+    notificationCount.style.display = 'flex';
+  } else {
+    notificationCount.style.display = 'none';
+  }
+}
+
+async function markNotificationAsRead(id) {
+  try {
+    const response = await apiCall(`/notifications/${id}/read`, {
+      method: 'POST'
+    });
+    if (response.success) {
+      // Remove the unread class from the notification
+      const notificationItem = document.querySelector(`[data-id="${id}"]`);
+      if (notificationItem) {
+        notificationItem.classList.remove('notification-unread');
+      }
+      // Reload the notification count
+      loadNotificationCount();
+    }
+  } catch (error) {
+    console.error('Failed to mark notification as read:', error);
+  }
+}
+
+async function markAllAsRead() {
+  try {
+    const response = await apiCall('/notifications/read-all', {
+      method: 'POST'
+    });
+    if (response.success) {
+      // Remove unread class from all notifications
+      const unreadNotifications = document.querySelectorAll('.notification-unread');
+      unreadNotifications.forEach(notification => {
+        notification.classList.remove('notification-unread');
+      });
+      
+      // Update notification count
+      updateNotificationCount(0);
+    }
+  } catch (error) {
+    console.error('Failed to mark all notifications as read:', error);
+  }
 }
 
 // Top search functionality
@@ -1653,38 +1800,11 @@ document.getElementById('topSearchInput').addEventListener('input', function(e) 
   searchItems();
 });
 
-// Real-time notifications (simulated)
-function addNotification(title, text, type = 'info') {
-  const notificationList = document.querySelector('.notification-list');
-  const notificationItem = document.createElement('div');
-  notificationItem.className = 'notification-item notification-unread';
-  notificationItem.innerHTML = `
-    <div class="notification-title">${title}</div>
-    <div class="notification-text">${text}</div>
-    <div class="notification-time">Just now</div>
-  `;
-  
-  notificationList.insertBefore(notificationItem, notificationList.firstChild);
-  
-  // Update notification count
-  const notificationCount = document.getElementById('notificationCount');
-  const currentCount = parseInt(notificationCount.textContent) || 0;
-  notificationCount.textContent = currentCount + 1;
-  notificationCount.style.display = 'flex';
+// Refresh notifications after inventory operations
+function refreshNotifications() {
+  loadNotifications();
+  loadNotificationCount();
 }
-
-// Simulate notifications for demo
-setInterval(() => {
-  const notifications = [
-    { title: 'Stock Update', text: 'New shipment received for electronics category' },
-    { title: 'Price Alert', text: 'Market price changed for USB cables' },
-    { title: 'System Info', text: 'Scheduled backup completed successfully' }
-  ];
-  
-  const randomNotification = notifications[Math.floor(Math.random() * notifications.length)];
-  // Uncomment the line below to enable random notifications
-  // addNotification(randomNotification.title, randomNotification.text);
-}, 30000); // Every 30 seconds
 
 // Keyboard shortcuts
 document.addEventListener('keydown', function(e) {
@@ -1710,26 +1830,40 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-async function fetchAdminUser() {
+async function fetchUser() {
   try {
-    const response = await apiCall('/user'); // Adjust endpoint as needed
-    if (response.success && response.data && response.data.role === 'admin') {
-      displayAdminUser(response.data);
+    const response = await apiCall('/user');
+    if (response.success && response.data) {
+      displayUser(response.data);
     }
   } catch (error) {
-    console.error('Failed to fetch admin user:', error);
+    console.error('Failed to fetch user:', error);
   }
 }
 
-function displayAdminUser(user) {
-  // Display full name
-  const usr = `${username.charAt(0).toUpperCase() + username.slice(1)}`;
-  document.getElementById('userName').textContent = usr;
+function displayUser(user) {
+  // Display username (capitalize first letter)
+  const username = user.username.charAt(0).toUpperCase() + user.username.slice(1);
+  document.getElementById('userName').textContent = username;
 
-  // Display role (capitalize first letter)
-  const role = username.role.charAt(0).toUpperCase() + username.role.slice(1);
-  document.getElementById('userRole').textContent = role;
+  // Set user avatar initials
+  const initials = username.substring(0, 2).toUpperCase();
+  const userAvatar = document.getElementById('userAvatar');
+  if (userAvatar) {
+    userAvatar.textContent = initials;
+  }
+
+  // Update dropdown elements as well
+  const userFullNameDropdown = document.getElementById('userFullNameDropdown');
+  const userEmailDropdown = document.getElementById('userEmailDropdown');
+  if (userFullNameDropdown) {
+    userFullNameDropdown.textContent = username;
+  }
+  if (userEmailDropdown) {
+    userEmailDropdown.textContent = `${user.username}@foxcontrolhub.com`;
+  }
 }
 </script>
 </body>
 </html>
+
