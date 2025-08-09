@@ -529,7 +529,6 @@
         <div class="user-avatar me-2" id="userAvatar"></div>
         <div class="d-none d-md-block">
           <div id="userName" style="font-size: 0.875rem; font-weight: 600; line-height: 1.2;"></div>
-          <div id="userRole" style="font-size: 0.75rem; color: #6c757d; line-height: 1.2;"></div>
         </div>
         <i class="bi bi-chevron-down ms-2"></i>
       </a>
@@ -1623,11 +1622,29 @@ function saveSettings() {
   bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide();
 }
 
-function logout() {
+async function logout() {
   if (confirm('Are you sure you want to sign out?')) {
-    // In a real application, this would clear session and redirect to login
-    alert('Signing out...');
-    // window.location.href = '/login';
+    try {
+      const response = await fetch('/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Redirect to login page
+        window.location.href = '/loginpage.html';
+      } else {
+        alert('Error signing out. Please try again.');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if API fails, redirect to login for security
+      window.location.href = '/loginpage.html';
+    }
   }
 }
 
@@ -1725,10 +1742,6 @@ function displayUser(user) {
   // Display username (capitalize first letter)
   const username = user.username.charAt(0).toUpperCase() + user.username.slice(1);
   document.getElementById('userName').textContent = username;
-
-  // Display role (capitalize first letter)
-  const role = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-  document.getElementById('userRole').textContent = role;
 
   // Set user avatar initials
   const initials = username.substring(0, 2).toUpperCase();
