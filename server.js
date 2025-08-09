@@ -1,7 +1,16 @@
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
-const { initializeDatabase, authenticateUser, sql } = require('./database');
+const { 
+  initializeDatabase, 
+  authenticateUser, 
+  sql,
+  createNotification,
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  getUnreadNotificationCount
+} = require('./database');
 const {
   initializeInventoryTable,
   getAllInventoryItems,
@@ -148,6 +157,55 @@ app.get('/api/user', requireAuth, (req, res) => {
       role: req.session.user.role
     }
   });
+});
+
+// Notification API endpoints
+app.get('/api/notifications', requireAuth, async (req, res) => {
+  try {
+    const notifications = await getNotifications(20);
+    res.json({ success: true, data: notifications });
+  } catch (error) {
+    console.error('Get notifications error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch notifications' });
+  }
+});
+
+app.get('/api/notifications/count', requireAuth, async (req, res) => {
+  try {
+    const count = await getUnreadNotificationCount();
+    res.json({ success: true, count: count });
+  } catch (error) {
+    console.error('Get notification count error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch notification count' });
+  }
+});
+
+app.post('/api/notifications/:id/read', requireAuth, async (req, res) => {
+  try {
+    const success = await markNotificationAsRead(req.params.id);
+    if (success) {
+      res.json({ success: true, message: 'Notification marked as read' });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to mark notification as read' });
+    }
+  } catch (error) {
+    console.error('Mark notification as read error:', error);
+    res.status(500).json({ success: false, message: 'Failed to mark notification as read' });
+  }
+});
+
+app.post('/api/notifications/read-all', requireAuth, async (req, res) => {
+  try {
+    const success = await markAllNotificationsAsRead();
+    if (success) {
+      res.json({ success: true, message: 'All notifications marked as read' });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to mark all notifications as read' });
+    }
+  } catch (error) {
+    console.error('Mark all notifications as read error:', error);
+    res.status(500).json({ success: false, message: 'Failed to mark all notifications as read' });
+  }
 });
 
 // API route to check database connection status

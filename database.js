@@ -22,7 +22,19 @@ const testConnection = async () => {
       )
     `;
     
-    console.log('✅ Users table created/verified');
+    // Create notifications table if it doesn't exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(100) NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(20) DEFAULT 'info',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_read BOOLEAN DEFAULT false
+      )
+    `;
+    
+    console.log('✅ Users and notifications tables created/verified');
   } catch (err) {
     console.error('❌ Database connection error:', err);
   }
@@ -95,9 +107,74 @@ const authenticateUser = async (username, password) => {
   }
 };
 
+// Notification functions
+const createNotification = async (title, message, type = 'info') => {
+  try {
+    const result = await sql`
+      INSERT INTO notifications (title, message, type, created_at, is_read) 
+      VALUES (${title}, ${message}, ${type}, CURRENT_TIMESTAMP, false)
+      RETURNING id, title, message, type, created_at, is_read
+    `;
+    return result[0];
+  } catch (err) {
+    console.error('Create notification error:', err);
+    return null;
+  }
+};
+
+const getNotifications = async (limit = 10) => {
+  try {
+    const result = await sql`
+      SELECT id, title, message, type, created_at, is_read 
+      FROM notifications 
+      ORDER BY created_at DESC 
+      LIMIT ${limit}
+    `;
+    return result;
+  } catch (err) {
+    console.error('Get notifications error:', err);
+    return [];
+  }
+};
+
+const markNotificationAsRead = async (id) => {
+  try {
+    await sql`UPDATE notifications SET is_read = true WHERE id = ${id}`;
+    return true;
+  } catch (err) {
+    console.error('Mark notification as read error:', err);
+    return false;
+  }
+};
+
+const markAllNotificationsAsRead = async () => {
+  try {
+    await sql`UPDATE notifications SET is_read = true WHERE is_read = false`;
+    return true;
+  } catch (err) {
+    console.error('Mark all notifications as read error:', err);
+    return false;
+  }
+};
+
+const getUnreadNotificationCount = async () => {
+  try {
+    const result = await sql`SELECT COUNT(*) as count FROM notifications WHERE is_read = false`;
+    return result[0].count;
+  } catch (err) {
+    console.error('Get unread notification count error:', err);
+    return 0;
+  }
+};
+
 module.exports = {
   sql,
   testConnection,
   initializeDatabase,
-  authenticateUser
+  authenticateUser,
+  createNotification,
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  getUnreadNotificationCount
 };
