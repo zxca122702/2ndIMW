@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Shipment Records - Fox Control Hub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #d19000;
+      --secondary-color: #f9c66b;
+      --border-color: #dee2e6;
+      --success-color: #198754;
+      --danger-color: #dc3545;
+      --warning-color: #ffc107;
+    }
+
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 14px;
+    }
+
+    .sidebar {
+      height: 100vh;
+      background-color: #fff;
+      border-right: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar .nav-link {
+      color: #333;
+      font-weight: 500;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin: 2px 0;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar .nav-link:hover {
+      background-color: #f8f9fa;
+      color: var(--primary-color);
+    }
+
+    .sidebar .nav-link.active {
+      background-color: var(--secondary-color);
+      color: #000;
+    }
+
+    .top-panel {
+      background-color: #e6e6e6;
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .action-buttons .btn {
+      margin: 0.25rem;
+      min-width: 140px;
+      font-weight: 500;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem;
+      transition: all 0.3s ease;
+    }
+
+    .action-buttons .btn:hover {
+      background-color: #b8800a;
+      transform: translateY(-2px);
+    }
+
+    .action-buttons .btn i {
+      font-size: 1.2rem;
+      margin-right: 0.5rem;
+    }
+
+    .shipment-card {
+      border: 2px solid #28a745;
+      border-radius: 15px;
+      padding: 1.5rem;
+      background: #fff;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+
+    .shipment-card h5 {
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+      color: #28a745;
+    }
+
+    .table-container {
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table {
+      margin-bottom: 0;
+    }
+
+    .table th {
+      background-color: #f8f9fa;
+      border-bottom: 2px solid var(--border-color);
+      font-weight: 600;
+      color: #495057;
+      padding: 1rem 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .table td {
+      padding: 0.875rem 0.75rem;
+      vertical-align: middle;
+      border-bottom: 1px solid #f1f3f4;
+    }
+
+    .table tbody tr:hover {
+      background-color: #f8f9fa;
+    }
+
+    .status-badge {
+      padding: 0.375rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-delivered {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .status-pending {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    .status-shipped {
+      background-color: #cce5ff;
+      color: #004085;
+    }
+
+    .status-processing {
+      background-color: #e2e3e5;
+      color: #383d41;
+    }
+
+    .priority-high {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    .priority-medium {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    .priority-low {
+      background-color: #d1ecf1;
+      color: #0c5460;
+    }
+
+    .item-actions i {
+      cursor: pointer;
+      margin: 0 0.5rem;
+      font-size: 1.1rem;
+      color: #6c757d;
+      transition: all 0.3s ease;
+    }
+
+    .item-actions i:hover {
+      color: var(--primary-color);
+      transform: scale(1.2);
+    }
+
+    .search-filter-section {
+      background: white;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-group {
+      margin-bottom: 1rem;
+    }
+
+    .filter-group label {
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 992px) {
+      .sidebar {
+        height: auto;
+        position: relative;
+      }
+      
+      .action-buttons {
+        justify-content: center !important;
+      }
+      
+      .action-buttons .btn {
+        min-width: 100px;
+        margin: 0.125rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .action-buttons .btn {
+        width: 100%;
+        margin: 0.25rem 0;
+        min-width: auto;
+      }
+      
+      .top-panel {
+        padding: 1rem;
+      }
+      
+      .shipment-card {
+        padding: 1rem;
+      }
+      
+      .table th,
+      .table td {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.25rem;
+      }
+      
+      .search-filter-section {
+        padding: 1rem;
+      }
+    }
+
+    /* Top Navigation */
+    .top-navbar {
+      background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .top-navbar .navbar-brand {
+      font-weight: bold;
+      color: var(--primary-color);
+      font-size: 1.25rem;
+    }
+
+    .top-navbar .navbar-nav .nav-link {
+      color: #495057;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .top-navbar .navbar-nav .nav-link:hover {
+      background-color: #f8f9fa;
+      color: var(--primary-color);
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background-color: var(--danger-color);
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .dropdown-menu {
+      border: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border-radius: 8px;
+      padding: 0.5rem 0;
+      min-width: 200px;
+    }
+
+    .dropdown-item {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+    }
+
+    .dropdown-item:hover {
+      background-color: #f8f9fa;
+      color: var(--primary-color);
+    }
+
+    .dropdown-divider {
+      margin: 0.5rem 0;
+    }
+
+    .notification-item {
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid #f1f1f1;
+      transition: all 0.3s ease;
+    }
+
+    .notification-item:hover {
+      background-color: #f8f9fa;
+    }
+
+    .notification-item:last-child {
+      border-bottom: none;
+    }
+
+    .notification-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #495057;
+      margin-bottom: 0.25rem;
+    }
+
+    .notification-text {
+      font-size: 0.75rem;
+      color: #6c757d;
+      margin-bottom: 0.25rem;
+    }
+
+    .notification-time {
+      font-size: 0.7rem;
+      color: #adb5bd;
+    }
+
+    .notification-unread {
+      background-color: #e3f2fd;
+      border-left: 3px solid var(--primary-color);
+    }
+
+    /* Responsive adjustments for top nav */
+    @media (max-width: 992px) {
+      .top-navbar {
+        padding: 0.5rem 1rem;
+      }
+      
+      .user-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<!-- Top Navigation -->
+<nav class="navbar navbar-expand-lg top-navbar">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">
+      <i class="bi bi-boxes me-2"></i>Fox Control Hub
+    </a>
+
+    <!-- Right side navigation -->
+    <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+      <!-- Search (hidden on mobile) -->
+      <div class="nav-item me-3 d-none d-lg-block">
+        <div class="input-group" style="width: 250px;">
+          <input type="text" class="form-control form-control-sm" placeholder="Quick search..." id="topSearchInput">
+          <button class="btn btn-outline-secondary btn-sm" type="button">
+            <i class="bi bi-search"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="nav-item dropdown me-3">
+        <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-bell fs-5"></i>
+          <span class="notification-badge" id="notificationCount">3</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="width: 320px;">
+          <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <h6 class="mb-0">Notifications</h6>
+            <button class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">Mark all as read</button>
+          </div>
+          <div class="notification-list" style="max-height: 300px; overflow-y: auto;">
+            <div class="notification-item notification-unread" data-id="1">
+              <div class="notification-title">Order Delivered</div>
+              <div class="notification-text">Order ORD-0001 delivered to John Smith</div>
+              <div class="notification-time">2 hours ago</div>
+            </div>
+            <div class="notification-item notification-unread" data-id="2">
+              <div class="notification-title">Order Shipped</div>
+              <div class="notification-text">Order ORD-0002 shipped via courier</div>
+              <div class="notification-time">1 day ago</div>
+            </div>
+            <div class="notification-item notification-unread" data-id="3">
+              <div class="notification-title">New Order</div>
+              <div class="notification-text">New order ORD-0003 received from Carlos Rodriguez</div>
+              <div class="notification-time">2 days ago</div>
+            </div>
+          </div>
+          <div class="text-center py-2 border-top">
+            <a href="#" class="btn btn-sm btn-link">View all notifications</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="nav-item dropdown me-3">
+        <a class="nav-link position-relative" href="#" id="messageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-chat-dots fs-5"></i>
+          <span class="notification-badge" style="background-color: var(--success-color);">2</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="messageDropdown" style="width: 300px;">
+          <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <h6 class="mb-0">Messages</h6>
+            <a href="#" class="btn btn-sm btn-link text-primary p-0">View all</a>
+          </div>
+          <div class="notification-list" style="max-height: 250px; overflow-y: auto;">
+            <div class="notification-item">
+              <div class="d-flex align-items-center">
+                <div class="user-avatar me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">JS</div>
+                <div class="flex-grow-1">
+                  <div class="notification-title">John Smith</div>
+                  <div class="notification-text">Thank you for the quick delivery!</div>
+                  <div class="notification-time">3 hours ago</div>
+                </div>
+              </div>
+            </div>
+            <div class="notification-item">
+              <div class="d-flex align-items-center">
+                <div class="user-avatar me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">MG</div>
+                <div class="flex-grow-1">
+                  <div class="notification-title">Maria Garcia</div>
+                  <div class="notification-text">When will my order be shipped?</div>
+                  <div class="notification-time">1 day ago</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Profile -->
+      <div class="nav-item dropdown">
+        <a class="nav-link d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <div class="user-avatar me-2">JD</div>
+          <div class="d-none d-md-block">
+            <div style="font-size: 0.875rem; font-weight: 600; line-height: 1.2;">John Doe</div>
+            <div style="font-size: 0.75rem; color: #6c757d; line-height: 1.2;">Administrator</div>
+          </div>
+          <i class="bi bi-chevron-down ms-2"></i>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+          <div class="px-3 py-2 border-bottom">
+            <div class="fw-bold">John Doe</div>
+            <div class="text-muted small">john.doe@company.com</div>
+          </div>
+          <a class="dropdown-item" href="#" onclick="showProfileModal()">
+            <i class="bi bi-person me-2"></i>My Profile
+          </a>
+          <a class="dropdown-item" href="#" onclick="showSettingsModal()">
+            <i class="bi bi-gear me-2"></i>Settings
+          </a>
+          <a class="dropdown-item" href="#">
+            <i class="bi bi-question-circle me-2"></i>Help & Support
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="#" onclick="showActivityLog()">
+            <i class="bi bi-clock-history me-2"></i>Activity Log
+          </a>
+          <a class="dropdown-item" href="#">
+            <i class="bi bi-shield-check me-2"></i>Security
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item text-danger" href="#" onclick="logout()">
+            <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-lg-2 col-md-3 sidebar p-4">
+      <nav class="nav flex-column">
+        <a class="nav-link" href="Inventory.html"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+        <a class="nav-link" href="Barcode.html"><i class="bi bi-upc-scan me-2"></i>Barcode</a>
+        <a class="nav-link" href="WarehouseLayAndOpti.html"><i class="bi bi-layout-wtf me-2"></i>Layout & Optimization</a>
+        <a class="nav-link" href="MaterialShipments.html"><i class="bi bi-truck me-2"></i>Material Shipments</a>
+        <a class="nav-link active" href="OrderShipments.html"><i class="bi bi-box-arrow-right me-2"></i>Order Shipments</a>
+        <a class="nav-link" href="StockTracking.html"><i class="bi bi-shop me-2"></i>Stock Tracking</a>
+        <a class="nav-link" href="Reports.html"><i class="bi bi-graph-up me-2"></i>Reports</a>
+
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-lg-10 col-md-9 p-4">
+      <!-- Top Action Panel -->
+      <div class="top-panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="fw-bold mb-0">Order Shipment Records</h4>
+          <div class="text-muted">
+            <i class="bi bi-calendar-event me-1"></i>
+            <span id="currentDate"></span>
+          </div>
+        </div>
+        <div class="d-flex flex-wrap justify-content-start action-buttons">
+          <button class="btn" onclick="createNewOrder()">
+            <i class="bi bi-plus-circle"></i>
+            New Order
+          </button>
+          <button class="btn" onclick="bulkShipOrders()">
+            <i class="bi bi-box-arrow-right"></i>
+            Bulk Ship
+          </button>
+          <button class="btn" onclick="printShippingLabels()">
+            <i class="bi bi-printer"></i>
+            Print Labels
+          </button>
+          <button class="btn" onclick="generateReports()">
+            <i class="bi bi-file-earmark-text"></i>
+            Reports
+          </button>
+          <button class="btn" onclick="viewInventoryImpact()">
+            <i class="bi bi-box-seam"></i>
+            Inventory Impact
+          </button>
+        </div>
+      </div>
+
+      <!-- Search and Filter Section -->
+      <div class="search-filter-section">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="filter-group">
+              <label for="searchOrder">Search Orders</label>
+              <input type="text" class="form-control" id="searchOrder" placeholder="Search by order ID, customer, or product...">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label for="orderStatusFilter">Status</label>
+              <select class="form-select" id="orderStatusFilter">
+                <option value="">All Status</option>
+                <option value="processing">Processing</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label for="priorityFilter">Priority</label>
+              <select class="form-select" id="priorityFilter">
+                <option value="">All Priority</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="filter-group">
+              <label for="orderDateRange">Order Date</label>
+              <input type="date" class="form-control" id="orderDateRange">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label>&nbsp;</label>
+              <button class="btn btn-outline-primary w-100" onclick="applyOrderFilters()">
+                <i class="bi bi-funnel"></i> Filter
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Shipments Table -->
+      <div class="shipment-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5><i class="bi bi-box-arrow-right me-2"></i>Order Shipment Records</h5>
+          <div class="text-muted">
+            <small>Total Orders: <span id="totalOrders">3</span></small>
+          </div>
+        </div>
+        <div class="table-container">
+          <div class="table-responsive">
+            <table class="table table-hover" id="ordersTable">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Customer</th>
+                  <th>Product/Item</th>
+                  <th>Quantity</th>
+                  <th>Total Value</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Order Date</th>
+                  <th>Ship Date</th>
+                  <th>Delivery Date</th>
+                  <th>Tracking #</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>ORD-0001</strong></td>
+                  <td>John Smith</td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <span>Wireless Earphone</span>
+                      <small class="text-muted ms-2">(ITM001)</small>
+                    </div>
+                    <small class="text-info">Stock: 15 available</small>
+                  </td>
+                  <td>2</td>
+                  <td>₱700.00</td>
+                  <td><span class="status-badge priority-high">High</span></td>
+                  <td><span class="status-badge status-delivered">Delivered</span></td>
+                  <td>2025-01-10</td>
+                  <td>2025-01-11</td>
+                  <td>2025-01-13</td>
+                  <td>TRK001234567</td>
+                  <td class="item-actions">
+                    <i class="bi bi-eye" title="View Details" onclick="viewOrder('ORD-0001')"></i>
+                    <i class="bi bi-box-seam" title="View in Inventory" onclick="viewInInventory('ITM001')"></i>
+                    <i class="bi bi-truck" title="Track" onclick="trackOrder('ORD-0001')"></i>
+                    <i class="bi bi-printer" title="Print Label" onclick="printLabel('ORD-0001')"></i>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>ORD-0002</strong></td>
+                  <td>Maria Garcia</td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <span>USB Cable</span>
+                      <small class="text-muted ms-2">(ITM002)</small>
+                    </div>
+                    <small class="text-warning">Stock: 8 remaining</small>
+                  </td>
+                  <td>3</td>
+                  <td>₱225.00</td>
+                  <td><span class="status-badge priority-medium">Medium</span></td>
+                  <td><span class="status-badge status-shipped">Shipped</span></td>
+                  <td>2025-01-12</td>
+                  <td>2025-01-13</td>
+                  <td>2025-01-15</td>
+                  <td>TRK001234568</td>
+                  <td class="item-actions">
+                    <i class="bi bi-eye" title="View Details" onclick="viewOrder('ORD-0002')"></i>
+                    <i class="bi bi-box-seam" title="View in Inventory" onclick="viewInInventory('ITM002')"></i>
+                    <i class="bi bi-truck" title="Track" onclick="trackOrder('ORD-0002')"></i>
+                    <i class="bi bi-printer" title="Print Label" onclick="printLabel('ORD-0002')"></i>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>ORD-0003</strong></td>
+                  <td>Carlos Rodriguez</td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <span>Wireless Earphone</span>
+                      <small class="text-muted ms-2">(ITM001)</small>
+                    </div>
+                    <small class="text-info">Stock: 15 available</small>
+                  </td>
+                  <td>1</td>
+                  <td>₱350.00</td>
+                  <td><span class="status-badge priority-low">Low</span></td>
+                  <td><span class="status-badge status-processing">Processing</span></td>
+                  <td>2025-01-14</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td class="item-actions">
+                    <i class="bi bi-eye" title="View Details" onclick="viewOrder('ORD-0003')"></i>
+                    <i class="bi bi-box-seam" title="View in Inventory" onclick="viewInInventory('ITM001')"></i>
+                    <i class="bi bi-pencil" title="Edit" onclick="editOrder('ORD-0003')"></i>
+                    <i class="bi bi-box-arrow-right" title="Ship Now" onclick="shipOrder('ORD-0003')"></i>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics Cards -->
+      <div class="row mt-4">
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-box-arrow-right text-success fs-1"></i>
+              <h4 class="mt-2">3</h4>
+              <p class="text-muted mb-0">Total Orders</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-check-circle text-success fs-1"></i>
+              <h4 class="mt-2">1</h4>
+              <p class="text-muted mb-0">Delivered</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-truck text-primary fs-1"></i>
+              <h4 class="mt-2">1</h4>
+              <p class="text-muted mb-0">Shipped</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-clock text-warning fs-1"></i>
+              <h4 class="mt-2">1</h4>
+              <p class="text-muted mb-0">Processing</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="row mt-4">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+              <h6 class="mb-0 fw-bold"><i class="bi bi-activity me-2"></i>Recent Activity</h6>
+            </div>
+            <div class="card-body">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-success rounded-circle p-2 me-3">
+                  <i class="bi bi-check text-white"></i>
+                </div>
+                <div>
+                  <div class="fw-bold">Order ORD-0001 delivered successfully</div>
+                  <small class="text-muted">2 hours ago</small>
+                </div>
+              </div>
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary rounded-circle p-2 me-3">
+                  <i class="bi bi-truck text-white"></i>
+                </div>
+                <div>
+                  <div class="fw-bold">Order ORD-0002 shipped to customer</div>
+                  <small class="text-muted">1 day ago</small>
+                </div>
+              </div>
+              <div class="d-flex align-items-center">
+                <div class="bg-warning rounded-circle p-2 me-3">
+                  <i class="bi bi-plus text-white"></i>
+                </div>
+                <div>
+                  <div class="fw-bold">New order ORD-0003 received</div>
+                  <small class="text-muted">2 days ago</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Set current date
+  document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+
+  // Sample functions for interactivity
+  function createNewOrder() {
+    alert('Create New Order functionality would be implemented here');
+  }
+
+  function bulkShipOrders() {
+    alert('Bulk Ship Orders functionality would be implemented here');
+  }
+
+  function printShippingLabels() {
+    alert('Print Shipping Labels functionality would be implemented here');
+  }
+
+  function generateReports() {
+    alert('Generate Reports functionality would be implemented here');
+  }
+
+  function viewOrder(id) {
+    alert('View order details for: ' + id);
+  }
+
+  function editOrder(id) {
+    alert('Edit order: ' + id);
+  }
+
+  function shipOrder(id) {
+    if (confirm('Are you sure you want to ship order ' + id + '?')) {
+      alert('Order ' + id + ' has been marked as shipped');
+    }
+  }
+
+  function trackOrder(id) {
+    alert('Track order: ' + id);
+  }
+
+  function printLabel(id) {
+    alert('Print shipping label for order: ' + id);
+  }
+
+  function viewInInventory(itemCode) {
+    // Redirect to inventory master data with the specific item highlighted
+    window.open('Inventory_Master_Data.html?highlight=' + itemCode, '_blank');
+  }
+
+  function applyOrderFilters() {
+    const searchTerm = document.getElementById('searchOrder').value;
+    const status = document.getElementById('orderStatusFilter').value;
+    const priority = document.getElementById('priorityFilter').value;
+    const date = document.getElementById('orderDateRange').value;
+    
+    // Filter functionality would be implemented here
+    console.log('Applying filters:', { searchTerm, status, priority, date });
+  }
+
+  // Search functionality
+  document.getElementById('searchOrder').addEventListener('input', function(e) {
+    // Real-time search functionality would be implemented here
+    console.log('Searching for:', e.target.value);
+  });
+
+  function viewInventoryImpact() {
+    alert('Inventory Impact: Orders will reduce inventory by 6 units total (2x Wireless Earphone, 3x USB Cable, 1x Wireless Earphone)');
+  }
+</script>
+</body>
+</html>

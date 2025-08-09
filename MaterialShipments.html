@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Material Shipment Records - Fox Control Hub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #d19000;
+      --secondary-color: #f9c66b;
+      --border-color: #dee2e6;
+      --success-color: #198754;
+      --danger-color: #dc3545;
+      --warning-color: #ffc107;
+    }
+
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 14px;
+    }
+
+    .sidebar {
+      height: 100vh;
+      background-color: #fff;
+      border-right: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar .nav-link {
+      color: #333;
+      font-weight: 500;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin: 2px 0;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar .nav-link:hover {
+      background-color: #f8f9fa;
+      color: var(--primary-color);
+    }
+
+    .sidebar .nav-link.active {
+      background-color: var(--secondary-color);
+      color: #000;
+    }
+
+    .top-panel {
+      background-color: #e6e6e6;
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .action-buttons .btn {
+      margin: 0.25rem;
+      min-width: 140px;
+      font-weight: 500;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem;
+      transition: all 0.3s ease;
+    }
+
+    .action-buttons .btn:hover {
+      background-color: #b8800a;
+      transform: translateY(-2px);
+    }
+
+    .action-buttons .btn i {
+      font-size: 1.2rem;
+      margin-right: 0.5rem;
+    }
+
+    .shipment-card {
+      border: 2px solid #0d6efd;
+      border-radius: 15px;
+      padding: 1.5rem;
+      background: #fff;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+
+    .shipment-card h5 {
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+      color: #0d6efd;
+    }
+
+    .table-container {
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table {
+      margin-bottom: 0;
+    }
+
+    .table th {
+      background-color: #f8f9fa;
+      border-bottom: 2px solid var(--border-color);
+      font-weight: 600;
+      color: #495057;
+      padding: 1rem 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .table td {
+      padding: 0.875rem 0.75rem;
+      vertical-align: middle;
+      border-bottom: 1px solid #f1f3f4;
+    }
+
+    .table tbody tr:hover {
+      background-color: #f8f9fa;
+    }
+
+    .status-badge {
+      padding: 0.375rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-delivered {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .status-pending {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    .status-shipped {
+      background-color: #cce5ff;
+      color: #004085;
+    }
+
+    .item-actions i {
+      cursor: pointer;
+      margin: 0 0.5rem;
+      font-size: 1.1rem;
+      color: #6c757d;
+      transition: all 0.3s ease;
+    }
+
+    .item-actions i:hover {
+      color: var(--primary-color);
+      transform: scale(1.2);
+    }
+
+    .search-filter-section {
+      background: white;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-group {
+      margin-bottom: 1rem;
+    }
+
+    .filter-group label {
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 992px) {
+      .sidebar {
+        height: auto;
+        position: relative;
+      }
+      
+      .action-buttons {
+        justify-content: center !important;
+      }
+      
+      .action-buttons .btn {
+        min-width: 100px;
+        margin: 0.125rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .action-buttons .btn {
+        width: 100%;
+        margin: 0.25rem 0;
+        min-width: auto;
+      }
+      
+      .top-panel {
+        padding: 1rem;
+      }
+      
+      .shipment-card {
+        padding: 1rem;
+      }
+      
+      .table th,
+      .table td {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.25rem;
+      }
+      
+      .search-filter-section {
+        padding: 1rem;
+      }
+    }
+
+    /* Top Navigation */
+    .top-navbar {
+      background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .top-navbar .navbar-brand {
+      font-weight: bold;
+      color: var(--primary-color);
+      font-size: 1.25rem;
+    }
+
+    .top-navbar .navbar-nav .nav-link {
+      color: #495057;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .top-navbar .navbar-nav .nav-link:hover {
+      background-color: #f8f9fa;
+      color: var(--primary-color);
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background-color: var(--danger-color);
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .dropdown-menu {
+      border: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border-radius: 8px;
+      padding: 0.5rem 0;
+      min-width: 200px;
+    }
+
+    .dropdown-item {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+    }
+
+    .dropdown-item:hover {
+      background-color: #f8f9fa;
+      color: var(--primary-color);
+    }
+
+    .dropdown-divider {
+      margin: 0.5rem 0;
+    }
+
+    .notification-item {
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid #f1f1f1;
+      transition: all 0.3s ease;
+    }
+
+    .notification-item:hover {
+      background-color: #f8f9fa;
+    }
+
+    .notification-item:last-child {
+      border-bottom: none;
+    }
+
+    .notification-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #495057;
+      margin-bottom: 0.25rem;
+    }
+
+    .notification-text {
+      font-size: 0.75rem;
+      color: #6c757d;
+      margin-bottom: 0.25rem;
+    }
+
+    .notification-time {
+      font-size: 0.7rem;
+      color: #adb5bd;
+    }
+
+    .notification-unread {
+      background-color: #e3f2fd;
+      border-left: 3px solid var(--primary-color);
+    }
+
+    /* Responsive adjustments for top nav */
+    @media (max-width: 992px) {
+      .top-navbar {
+        padding: 0.5rem 1rem;
+      }
+      
+      .user-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<!-- Top Navigation -->
+<nav class="navbar navbar-expand-lg top-navbar">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">
+      <i class="bi bi-boxes me-2"></i>Fox Control Hub
+    </a>
+
+    <!-- Right side navigation -->
+    <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+      <!-- Search (hidden on mobile) -->
+      <div class="nav-item me-3 d-none d-lg-block">
+        <div class="input-group" style="width: 250px;">
+          <input type="text" class="form-control form-control-sm" placeholder="Quick search..." id="topSearchInput">
+          <button class="btn btn-outline-secondary btn-sm" type="button">
+            <i class="bi bi-search"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="nav-item dropdown me-3">
+        <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-bell fs-5"></i>
+          <span class="notification-badge" id="notificationCount">2</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="width: 320px;">
+          <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <h6 class="mb-0">Notifications</h6>
+            <button class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">Mark all as read</button>
+          </div>
+          <div class="notification-list" style="max-height: 300px; overflow-y: auto;">
+            <div class="notification-item notification-unread" data-id="1">
+              <div class="notification-title">Shipment Delivered</div>
+              <div class="notification-text">MAT-0001 Aluminum Sheets delivered successfully</div>
+              <div class="notification-time">1 hour ago</div>
+            </div>
+            <div class="notification-item notification-unread" data-id="2">
+              <div class="notification-title">New Shipment</div>
+              <div class="notification-text">New material shipment created: MAT-0002</div>
+              <div class="notification-time">3 hours ago</div>
+            </div>
+          </div>
+          <div class="text-center py-2 border-top">
+            <a href="#" class="btn btn-sm btn-link">View all notifications</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="nav-item dropdown me-3">
+        <a class="nav-link position-relative" href="#" id="messageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-chat-dots fs-5"></i>
+          <span class="notification-badge" style="background-color: var(--success-color);">1</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="messageDropdown" style="width: 300px;">
+          <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <h6 class="mb-0">Messages</h6>
+            <a href="#" class="btn btn-sm btn-link text-primary p-0">View all</a>
+          </div>
+          <div class="notification-list" style="max-height: 250px; overflow-y: auto;">
+            <div class="notification-item">
+              <div class="d-flex align-items-center">
+                <div class="user-avatar me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">SM</div>
+                <div class="flex-grow-1">
+                  <div class="notification-title">Supply Manager</div>
+                  <div class="notification-text">Aluminum Sheets shipment has been received</div>
+                  <div class="notification-time">2 hours ago</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Profile -->
+      <div class="nav-item dropdown">
+        <a class="nav-link d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <div class="user-avatar me-2">JD</div>
+          <div class="d-none d-md-block">
+            <div style="font-size: 0.875rem; font-weight: 600; line-height: 1.2;">John Doe</div>
+            <div style="font-size: 0.75rem; color: #6c757d; line-height: 1.2;">Administrator</div>
+          </div>
+          <i class="bi bi-chevron-down ms-2"></i>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+          <div class="px-3 py-2 border-bottom">
+            <div class="fw-bold">John Doe</div>
+            <div class="text-muted small">john.doe@company.com</div>
+          </div>
+          <a class="dropdown-item" href="#" onclick="showProfileModal()">
+            <i class="bi bi-person me-2"></i>My Profile
+          </a>
+          <a class="dropdown-item" href="#" onclick="showSettingsModal()">
+            <i class="bi bi-gear me-2"></i>Settings
+          </a>
+          <a class="dropdown-item" href="#">
+            <i class="bi bi-question-circle me-2"></i>Help & Support
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="#" onclick="showActivityLog()">
+            <i class="bi bi-clock-history me-2"></i>Activity Log
+          </a>
+          <a class="dropdown-item" href="#">
+            <i class="bi bi-shield-check me-2"></i>Security
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item text-danger" href="#" onclick="logout()">
+            <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-lg-2 col-md-3 sidebar p-4">
+      <nav class="nav flex-column">
+        <a class="nav-link" href="Inventory.html"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+        <a class="nav-link" href="Barcode.html"><i class="bi bi-upc-scan me-2"></i>Barcode</a>
+        <a class="nav-link" href="WarehouseLayAndOpti.html"><i class="bi bi-layout-wtf me-2"></i>Layout & Optimization</a>
+        <a class="nav-link active" href="MaterialShipments.html"><i class="bi bi-truck me-2"></i>Material Shipments</a>
+        <a class="nav-link" href="OrderShipments.html"><i class="bi bi-box-arrow-right me-2"></i>Order Shipments</a>
+        <a class="nav-link" href="StockTracking.html"><i class="bi bi-shop me-2"></i>Stock Tracking</a>
+        <a class="nav-link" href="Reports.html"><i class="bi bi-graph-up me-2"></i>Reports</a>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-lg-10 col-md-9 p-4">
+      <!-- Top Action Panel -->
+      <div class="top-panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="fw-bold mb-0">Material Shipment Records</h4>
+          <div class="text-muted">
+            <i class="bi bi-calendar-event me-1"></i>
+            <span id="currentDate"></span>
+          </div>
+        </div>
+        <div class="d-flex flex-wrap justify-content-start action-buttons">
+          <button class="btn" onclick="addNewShipment()">
+            <i class="bi bi-plus-circle"></i>
+            New Shipment
+          </button>
+          <button class="btn" onclick="importShipments()">
+            <i class="bi bi-upload"></i>
+            Import Data
+          </button>
+          <button class="btn" onclick="exportShipments()">
+            <i class="bi bi-download"></i>
+            Export Report
+          </button>
+          <button class="btn" onclick="trackShipment()">
+            <i class="bi bi-geo-alt"></i>
+            Track Shipment
+          </button>
+          <button class="btn" onclick="viewInventoryImpact()">
+            <i class="bi bi-box-seam"></i>
+            Inventory Impact
+          </button>
+        </div>
+      </div>
+
+      <!-- Search and Filter Section -->
+      <div class="search-filter-section">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="filter-group">
+              <label for="searchShipment">Search Shipments</label>
+              <input type="text" class="form-control" id="searchShipment" placeholder="Search by ID, material, or supplier...">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label for="statusFilter">Status</label>
+              <select class="form-select" id="statusFilter">
+                <option value="">All Status</option>
+                <option value="delivered">Delivered</option>
+                <option value="shipped">Shipped</option>
+                <option value="pending">Pending</option>
+              </select>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label for="typeFilter">Type</label>
+              <select class="form-select" id="typeFilter">
+                <option value="">All Types</option>
+                <option value="inbound">Inbound</option>
+                <option value="outbound">Outbound</option>
+              </select>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="filter-group">
+              <label for="dateRange">Date Range</label>
+              <input type="date" class="form-control" id="dateRange">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label>&nbsp;</label>
+              <button class="btn btn-outline-primary w-100" onclick="applyFilters()">
+                <i class="bi bi-funnel"></i> Filter
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Material Shipments Table -->
+      <div class="shipment-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5><i class="bi bi-truck me-2"></i>Material Shipment Records</h5>
+          <div class="text-muted">
+            <small>Total Records: <span id="totalRecords">3</span></small>
+          </div>
+        </div>
+        <div class="table-container">
+          <div class="table-responsive">
+            <table class="table table-hover" id="shipmentsTable">
+              <thead>
+                <tr>
+                  <th>Shipment ID</th>
+                  <th>Material/Stock Name</th>
+                  <th>Quantity</th>
+                  <th>Unit</th>
+                  <th>Type</th>
+                  <th>Source</th>
+                  <th>Destination</th>
+                  <th>Status</th>
+                  <th>Date Shipped</th>
+                  <th>Est. Delivery</th>
+                  <th>Received Date</th>
+                  <th>Handled By</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>MAT-0001</strong></td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <span>Aluminum Sheets</span>
+                      <small class="text-muted ms-2">(Raw Material)</small>
+                    </div>
+                  </td>
+                  <td>100</td>
+                  <td>kg</td>
+                  <td><span class="badge bg-primary">Inbound</span></td>
+                  <td>Supplier XYZ</td>
+                  <td>Main Warehouse (WH001)</td>
+                  <td><span class="status-badge status-delivered">Delivered</span></td>
+                  <td>2025-07-28</td>
+                  <td>2025-07-30</td>
+                  <td>2025-07-30</td>
+                  <td>Jane Dela Cruz</td>
+                  <td class="item-actions">
+                    <i class="bi bi-eye" title="View Details" onclick="viewShipment('MAT-0001')"></i>
+                    <i class="bi bi-box-seam" title="View in Inventory" onclick="viewInInventory('MAT-0001')"></i>
+                    <i class="bi bi-pencil" title="Edit" onclick="editShipment('MAT-0001')"></i>
+                    <i class="bi bi-trash" title="Delete" onclick="deleteShipment('MAT-0001')"></i>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>MAT-0002</strong></td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <span>USB Cable</span>
+                      <small class="text-muted ms-2">(ITM002)</small>
+                    </div>
+                  </td>
+                  <td>50</td>
+                  <td>pcs</td>
+                  <td><span class="badge bg-success">Inbound</span></td>
+                  <td>Tech Supplier Co.</td>
+                  <td>Main Warehouse (WH002)</td>
+                  <td><span class="status-badge status-shipped">Shipped</span></td>
+                  <td>2025-01-14</td>
+                  <td>2025-01-16</td>
+                  <td>-</td>
+                  <td>Supply Manager</td>
+                  <td class="item-actions">
+                    <i class="bi bi-eye" title="View Details" onclick="viewShipment('MAT-0002')"></i>
+                    <i class="bi bi-box-seam" title="View in Inventory" onclick="viewInInventory('ITM002')"></i>
+                    <i class="bi bi-pencil" title="Edit" onclick="editShipment('MAT-0002')"></i>
+                    <i class="bi bi-trash" title="Delete" onclick="deleteShipment('MAT-0002')"></i>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>MAT-0003</strong></td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <span>Wireless Earphone</span>
+                      <small class="text-muted ms-2">(ITM001)</small>
+                    </div>
+                  </td>
+                  <td>25</td>
+                  <td>pcs</td>
+                  <td><span class="badge bg-warning text-dark">Outbound</span></td>
+                  <td>WH001</td>
+                  <td>Customer Fulfillment</td>
+                  <td><span class="status-badge status-processing">Processing</span></td>
+                  <td>-</td>
+                  <td>2025-01-17</td>
+                  <td>-</td>
+                  <td>Warehouse Staff</td>
+                  <td class="item-actions">
+                    <i class="bi bi-eye" title="View Details" onclick="viewShipment('MAT-0003')"></i>
+                    <i class="bi bi-box-seam" title="View in Inventory" onclick="viewInInventory('ITM001')"></i>
+                    <i class="bi bi-pencil" title="Edit" onclick="editShipment('MAT-0003')"></i>
+                    <i class="bi bi-trash" title="Delete" onclick="deleteShipment('MAT-0003')"></i>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics Cards -->
+      <div class="row mt-4">
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-truck text-primary fs-1"></i>
+              <h4 class="mt-2">3</h4>
+              <p class="text-muted mb-0">Total Shipments</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-check-circle text-success fs-1"></i>
+              <h4 class="mt-2">1</h4>
+              <p class="text-muted mb-0">Delivered</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-clock text-warning fs-1"></i>
+              <h4 class="mt-2">2</h4>
+              <p class="text-muted mb-0">In Transit</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-box-arrow-right text-info fs-1"></i>
+              <h4 class="mt-2">2</h4>
+              <p class="text-muted mb-0">Inbound</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inventory Impact Section -->
+      <div class="row mt-4">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+              <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2"></i>Inventory Impact Summary</h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshInventoryImpact()">
+                  <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="text-center p-3 border rounded">
+                    <i class="bi bi-arrow-up-circle text-success fs-2"></i>
+                    <h5 class="mt-2">Inbound Items</h5>
+                    <p class="text-muted mb-1">Expected to increase inventory</p>
+                    <div class="fw-bold">
+                      <span class="text-success">+175 units</span>
+                    </div>
+                    <small class="text-muted">USB Cable (+50), Aluminum Sheets (+100), Other (+25)</small>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="text-center p-3 border rounded">
+                    <i class="bi bi-arrow-down-circle text-warning fs-2"></i>
+                    <h5 class="mt-2">Outbound Items</h5>
+                    <p class="text-muted mb-1">Will decrease inventory</p>
+                    <div class="fw-bold">
+                      <span class="text-warning">-25 units</span>
+                    </div>
+                    <small class="text-muted">Wireless Earphone (-25)</small>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="text-center p-3 border rounded">
+                    <i class="bi bi-calculator text-info fs-2"></i>
+                    <h5 class="mt-2">Net Impact</h5>
+                    <p class="text-muted mb-1">Overall inventory change</p>
+                    <div class="fw-bold">
+                      <span class="text-success">+150 units</span>
+                    </div>
+                    <small class="text-muted">Positive inventory growth</small>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-bold">Quick Actions:</span>
+                  <div>
+                    <button class="btn btn-sm btn-outline-primary me-2" onclick="window.open('Inventory_Master_Data.html', '_blank')">
+                      <i class="bi bi-box-seam me-1"></i>View Full Inventory
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" onclick="window.open('material_shipments.html?filter=inbound', '_self')">
+                      <i class="bi bi-arrow-up me-1"></i>View Inbound Only
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Set current date
+  document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+
+  // Sample functions for interactivity
+  function addNewShipment() {
+    alert('Add New Shipment functionality would be implemented here');
+  }
+
+  function importShipments() {
+    alert('Import Shipments functionality would be implemented here');
+  }
+
+  function exportShipments() {
+    alert('Export Shipments functionality would be implemented here');
+  }
+
+  function trackShipment() {
+    alert('Track Shipment functionality would be implemented here');
+  }
+
+  function viewShipment(id) {
+    alert('View shipment details for: ' + id);
+  }
+
+  function editShipment(id) {
+    alert('Edit shipment: ' + id);
+  }
+
+  function deleteShipment(id) {
+    if (confirm('Are you sure you want to delete shipment ' + id + '?')) {
+      alert('Shipment ' + id + ' deleted');
+    }
+  }
+
+  function viewInInventory(itemCode) {
+    // Redirect to inventory master data with the specific item highlighted
+    window.open('Inventory_Master_Data.html?highlight=' + itemCode, '_blank');
+  }
+
+  function applyFilters() {
+    const searchTerm = document.getElementById('searchShipment').value;
+    const status = document.getElementById('statusFilter').value;
+    const type = document.getElementById('typeFilter').value;
+    const date = document.getElementById('dateRange').value;
+    
+    // Filter functionality would be implemented here
+    console.log('Applying filters:', { searchTerm, status, type, date });
+  }
+
+  // Search functionality
+  document.getElementById('searchShipment').addEventListener('input', function(e) {
+    // Real-time search functionality would be implemented here
+    console.log('Searching for:', e.target.value);
+  });
+
+  function viewInventoryImpact() {
+    // Scroll to inventory impact section
+    document.querySelector('.card-header h6').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function refreshInventoryImpact() {
+    alert('Inventory impact data refreshed');
+    // In a real application, this would fetch updated data from the server
+  }
+</script>
+</body>
+</html>
