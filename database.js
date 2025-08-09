@@ -107,6 +107,10 @@ const authenticateUser = async (username, password) => {
   }
 };
 
+// In-memory notifications storage for testing when database is not available
+let inMemoryNotifications = [];
+let nextNotificationId = 1;
+
 // Notification functions
 const createNotification = async (title, message, type = 'info') => {
   try {
@@ -118,7 +122,21 @@ const createNotification = async (title, message, type = 'info') => {
     return result[0];
   } catch (err) {
     console.error('Create notification error:', err);
-    return null;
+    // Fallback to in-memory storage
+    const notification = {
+      id: nextNotificationId++,
+      title,
+      message,
+      type,
+      created_at: new Date().toISOString(),
+      is_read: false
+    };
+    inMemoryNotifications.unshift(notification);
+    // Keep only the latest 20 notifications
+    if (inMemoryNotifications.length > 20) {
+      inMemoryNotifications = inMemoryNotifications.slice(0, 20);
+    }
+    return notification;
   }
 };
 
@@ -133,7 +151,8 @@ const getNotifications = async (limit = 10) => {
     return result;
   } catch (err) {
     console.error('Get notifications error:', err);
-    return [];
+    // Fallback to in-memory storage
+    return inMemoryNotifications.slice(0, limit);
   }
 };
 
@@ -143,6 +162,12 @@ const markNotificationAsRead = async (id) => {
     return true;
   } catch (err) {
     console.error('Mark notification as read error:', err);
+    // Fallback to in-memory storage
+    const notification = inMemoryNotifications.find(n => n.id == id);
+    if (notification) {
+      notification.is_read = true;
+      return true;
+    }
     return false;
   }
 };
@@ -153,7 +178,11 @@ const markAllNotificationsAsRead = async () => {
     return true;
   } catch (err) {
     console.error('Mark all notifications as read error:', err);
-    return false;
+    // Fallback to in-memory storage
+    inMemoryNotifications.forEach(notification => {
+      notification.is_read = true;
+    });
+    return true;
   }
 };
 
@@ -163,7 +192,8 @@ const getUnreadNotificationCount = async () => {
     return result[0].count;
   } catch (err) {
     console.error('Get unread notification count error:', err);
-    return 0;
+    // Fallback to in-memory storage
+    return inMemoryNotifications.filter(n => !n.is_read).length;
   }
 };
 

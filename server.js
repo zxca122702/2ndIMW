@@ -208,6 +208,21 @@ app.post('/api/notifications/read-all', requireAuth, async (req, res) => {
   }
 });
 
+// Test route to create a notification
+app.post('/api/test-notification', requireAuth, async (req, res) => {
+  try {
+    const notification = await createNotification(
+      'Test Notification',
+      'This is a test notification to verify the system is working',
+      'info'
+    );
+    res.json({ success: true, message: 'Test notification created', data: notification });
+  } catch (error) {
+    console.error('Test notification error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create test notification' });
+  }
+});
+
 // API route to check database connection status
 app.get('/api/db-status', async (req, res) => {
   try {
@@ -256,27 +271,63 @@ app.get('/api/inventory/:id', requireAuth, async (req, res) => {
 app.post('/api/inventory', requireAuth, async (req, res) => {
   try {
     const newItem = await createInventoryItem(req.body);
+    
+    // Create notification for successful item addition
+    try {
+      await createNotification(
+        'Item Added Successfully',
+        `${newItem.name} has been added to inventory with SKU: ${newItem.sku}`,
+        'success'
+      );
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+    }
+    
     res.json({ success: true, message: 'Item inserted successfully', data: newItem });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to insert item' });
   }
 });
 
-// API: Update existing inventory item
+// API: Delete multiple inventory items
 app.post('/api/inventory/delete-multiple', requireAuth, async (req, res) => {
   try {
     const { ids } = req.body;
     await deleteMultipleInventoryItems(ids);
+    
+    // Create notification for successful item deletion
+    try {
+      await createNotification(
+        'Items Deleted Successfully',
+        `${ids.length} item(s) have been deleted from inventory`,
+        'warning'
+      );
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+    }
+    
     res.json({ success: true, message: 'Items deleted successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to delete items' });
   }
 });
 
-// API: Delete inventory item
+// API: Update inventory item
 app.put('/api/inventory/:id', requireAuth, async (req, res) => {
   try {
     const updatedItem = await updateInventoryItem(req.params.id, req.body);
+    
+    // Create notification for successful item update
+    try {
+      await createNotification(
+        'Item Updated Successfully',
+        `${updatedItem.name} (SKU: ${updatedItem.sku}) has been updated in inventory`,
+        'info'
+      );
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+    }
+    
     res.json({ success: true, message: 'Item updated successfully', data: updatedItem });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to update item' });

@@ -452,33 +452,18 @@
       <div class="nav-item dropdown me-3">
         <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
           <i class="bi bi-bell fs-5"></i>
-          <span class="notification-badge" id="notificationCount">3</span>
+          <span class="notification-badge" id="notificationCount" style="display: none;">0</span>
         </a>
         <div class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="width: 320px;">
           <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
             <h6 class="mb-0">Notifications</h6>
             <button class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">Mark all as read</button>
           </div>
-          <div class="notification-list" style="max-height: 300px; overflow-y: auto;">
-            <div class="notification-item notification-unread" data-id="1">
-              <div class="notification-title">Low Stock Alert</div>
-              <div class="notification-text">USB Cable quantity is below minimum threshold (8 remaining)</div>
-              <div class="notification-time">2 minutes ago</div>
-            </div>
-            <div class="notification-item notification-unread" data-id="2">
-              <div class="notification-title">New Item Added</div>
-              <div class="notification-text">Wireless Earphone has been added to inventory</div>
-              <div class="notification-time">1 hour ago</div>
-            </div>
-            <div class="notification-item notification-unread" data-id="3">
-              <div class="notification-title">Price Update</div>
-              <div class="notification-text">Buy price updated for item ITM001</div>
-              <div class="notification-time">3 hours ago</div>
-            </div>
-            <div class="notification-item" data-id="4">
-              <div class="notification-title">System Backup</div>
-              <div class="notification-text">Daily backup completed successfully</div>
-              <div class="notification-time">1 day ago</div>
+          <div class="notification-list" id="notificationList" style="max-height: 300px; overflow-y: auto;">
+            <!-- Dynamic notifications will be loaded here -->
+            <div class="text-center py-3" id="noNotifications" style="display: none;">
+              <i class="bi bi-bell-slash text-muted fs-4"></i>
+              <div class="text-muted mt-2">No notifications yet</div>
             </div>
           </div>
           <div class="text-center py-2 border-top">
@@ -1028,6 +1013,8 @@ let currentEditId = null;
 document.addEventListener('DOMContentLoaded', function() {
   loadInitialData();
   fetchUser();
+  loadNotifications();
+  loadNotificationCount();
 });
 
 // API Helper Functions
@@ -1290,6 +1277,7 @@ async function saveItem() {
       currentEditId = null; // Reset edit state
       bootstrap.Modal.getInstance(document.getElementById('itemModal')).hide();
       await loadInitialData(); // Refresh data and table
+      refreshNotifications(); // Refresh notifications
     } else {
       showMessage(response.message, 'error');
     }
@@ -1309,6 +1297,7 @@ async function deleteItem(id) {
     if (response.success) {
       showMessage('Item deleted successfully');
       await loadInitialData();
+      refreshNotifications(); // Refresh notifications
     } else {
       showMessage(response.message || 'Failed to delete item', 'error');
     }
@@ -1336,6 +1325,7 @@ async function deleteSelected() {
     if (response.success) {
       showMessage('Items deleted successfully');
       await loadInitialData();
+      refreshNotifications(); // Refresh notifications
     } else {
       showMessage(response.message || 'Failed to delete items', 'error');
     }
@@ -1649,18 +1639,158 @@ async function logout() {
 }
 
 // Notification functions
-function markAllAsRead() {
-  const unreadNotifications = document.querySelectorAll('.notification-unread');
-  unreadNotifications.forEach(notification => {
-    notification.classList.remove('notification-unread');
+async function loadNotifications() {
+  try {
+    const response = await apiCall('/notifications');
+    if (response.success) {
+      displayNotifications(response.data);
+    }
+  } catch (error) {
+    console.error('Failed to load notifications:', error);
+  }
+}
+
+async function loadNotificationCount() {
+  try {
+    const response = await apiCall('/notifications/count');
+    if (response.success) {
+      updateNotificationCount(response.count);
+    }
+  } catch (error) {
+    console.error('Failed to load notification count:', error);
+  }
+}
+
+function displayNotifications(notifications) {
+  const notificationList = document.getElementById('notificationList');
+  const noNotifications = document.getElementById('noNotifications');
+  
+  if (!notifications || notifications.length === 0) {
+    noNotifications.style.display = 'block';
+    return;
+  }
+  
+  noNotifications.style.display = 'none';
+  
+  // Clear existing notifications
+  notificationList.innerHTML = '';
+  
+  notifications.forEach(notification => {
+    const notificationItem = document.createElement('div');
+    notificationItem.className = `notification-item ${!notification.is_read ? 'notification-unread' : ''}`;
+    notificationItem.setAttribute('data-id', notification.id);
+    
+    // Format the timestamp
+    const timeAgo = formatTimeAgo(new Date(notification.created_at));
+    
+    // Get notification type icon
+    const icon = getNotificationIcon(notification.type);
+    
+    notificationItem.innerHTML = `
+      <div class="d-flex align-items-start">
+        <div class="me-2 mt-1">${icon}</div>
+        <div class="flex-grow-1" onclick="markNotificationAsRead(${notification.id})">
+          <div class="notification-title">${notification.title}</div>
+          <div class="notification-text">${notification.message}</div>
+          <div class="notification-time">${timeAgo}</div>
+        </div>
+      </div>
+    `;
+    
+    notificationList.appendChild(notificationItem);
   });
   
-  // Update notification count
-  const notificationCount = document.getElementById('notificationCount');
-  notificationCount.textContent = '0';
-  notificationCount.style.display = 'none';
+  // Add the "no notifications" div back for future use
+  const noNotificationsDiv = document.createElement('div');
+  noNotificationsDiv.className = 'text-center py-3';
+  noNotificationsDiv.id = 'noNotifications';
+  noNotificationsDiv.style.display = 'none';
+  noNotificationsDiv.innerHTML = `
+    <i class="bi bi-bell-slash text-muted fs-4"></i>
+    <div class="text-muted mt-2">No notifications yet</div>
+  `;
+  notificationList.appendChild(noNotificationsDiv);
+}
+
+function getNotificationIcon(type) {
+  switch (type) {
+    case 'success':
+      return '<i class="bi bi-check-circle-fill text-success"></i>';
+    case 'warning':
+      return '<i class="bi bi-exclamation-triangle-fill text-warning"></i>';
+    case 'error':
+      return '<i class="bi bi-x-circle-fill text-danger"></i>';
+    case 'info':
+    default:
+      return '<i class="bi bi-info-circle-fill text-primary"></i>';
+  }
+}
+
+function formatTimeAgo(date) {
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
   
-  alert('All notifications marked as read');
+  if (diffInSeconds < 60) {
+    return 'Just now';
+  } else if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  } else if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  } else {
+    const days = Math.floor(diffInSeconds / 86400);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  }
+}
+
+function updateNotificationCount(count) {
+  const notificationCount = document.getElementById('notificationCount');
+  if (count > 0) {
+    notificationCount.textContent = count;
+    notificationCount.style.display = 'flex';
+  } else {
+    notificationCount.style.display = 'none';
+  }
+}
+
+async function markNotificationAsRead(id) {
+  try {
+    const response = await apiCall(`/notifications/${id}/read`, {
+      method: 'POST'
+    });
+    if (response.success) {
+      // Remove the unread class from the notification
+      const notificationItem = document.querySelector(`[data-id="${id}"]`);
+      if (notificationItem) {
+        notificationItem.classList.remove('notification-unread');
+      }
+      // Reload the notification count
+      loadNotificationCount();
+    }
+  } catch (error) {
+    console.error('Failed to mark notification as read:', error);
+  }
+}
+
+async function markAllAsRead() {
+  try {
+    const response = await apiCall('/notifications/read-all', {
+      method: 'POST'
+    });
+    if (response.success) {
+      // Remove unread class from all notifications
+      const unreadNotifications = document.querySelectorAll('.notification-unread');
+      unreadNotifications.forEach(notification => {
+        notification.classList.remove('notification-unread');
+      });
+      
+      // Update notification count
+      updateNotificationCount(0);
+    }
+  } catch (error) {
+    console.error('Failed to mark all notifications as read:', error);
+  }
 }
 
 // Top search functionality
@@ -1670,38 +1800,11 @@ document.getElementById('topSearchInput').addEventListener('input', function(e) 
   searchItems();
 });
 
-// Real-time notifications (simulated)
-function addNotification(title, text, type = 'info') {
-  const notificationList = document.querySelector('.notification-list');
-  const notificationItem = document.createElement('div');
-  notificationItem.className = 'notification-item notification-unread';
-  notificationItem.innerHTML = `
-    <div class="notification-title">${title}</div>
-    <div class="notification-text">${text}</div>
-    <div class="notification-time">Just now</div>
-  `;
-  
-  notificationList.insertBefore(notificationItem, notificationList.firstChild);
-  
-  // Update notification count
-  const notificationCount = document.getElementById('notificationCount');
-  const currentCount = parseInt(notificationCount.textContent) || 0;
-  notificationCount.textContent = currentCount + 1;
-  notificationCount.style.display = 'flex';
+// Refresh notifications after inventory operations
+function refreshNotifications() {
+  loadNotifications();
+  loadNotificationCount();
 }
-
-// Simulate notifications for demo
-setInterval(() => {
-  const notifications = [
-    { title: 'Stock Update', text: 'New shipment received for electronics category' },
-    { title: 'Price Alert', text: 'Market price changed for USB cables' },
-    { title: 'System Info', text: 'Scheduled backup completed successfully' }
-  ];
-  
-  const randomNotification = notifications[Math.floor(Math.random() * notifications.length)];
-  // Uncomment the line below to enable random notifications
-  // addNotification(randomNotification.title, randomNotification.text);
-}, 30000); // Every 30 seconds
 
 // Keyboard shortcuts
 document.addEventListener('keydown', function(e) {
