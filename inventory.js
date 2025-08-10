@@ -14,7 +14,7 @@ const initializeInventoryTable = async () => {
         sell_price DECIMAL(10,2),
         location VARCHAR(255) NOT NULL,
         category_id VARCHAR(50),
-        status VARCHAR(20) DEFAULT 'active',
+        status VARCHAR(20),
         warehouse_id VARCHAR(50),
         total_quantity INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -90,7 +90,7 @@ const initializeMaterialShipmentsTable = async () => {
       CREATE TABLE IF NOT EXISTS material_shipments (
         id SERIAL PRIMARY KEY,
         shipment_id VARCHAR(50) UNIQUE NOT NULL,
-        material_id VARCHAR(50) NOT NULL,
+        bom_id VARCHAR(50), 
         category_id VARCHAR(50) NOT NULL,
         material_name VARCHAR(255) NOT NULL,
         quantity INTEGER NOT NULL,
@@ -98,7 +98,7 @@ const initializeMaterialShipmentsTable = async () => {
         shipment_type VARCHAR(20) NOT NULL,
         source VARCHAR(255) NOT NULL,
         destination VARCHAR(255) NOT NULL,
-        status VARCHAR(20) DEFAULT 'pending',
+        status VARCHAR(20),
         date_shipped DATE,
         estimated_delivery DATE,
         received_date DATE,
@@ -111,6 +111,37 @@ const initializeMaterialShipmentsTable = async () => {
     console.log('✅ Material shipments table created/verified');
   } catch (err) {
     console.error('❌ Error creating material shipments table:', err);
+    throw err;
+  }
+};
+
+// Initialize order shipments table
+const initializeOrderShipmentsTable = async () => {
+  try {
+    const sql = await database.sql();
+    await sql`
+      CREATE TABLE IF NOT EXISTS order_shipments (
+        id SERIAL PRIMARY KEY,
+        order_id VARCHAR(50) UNIQUE NOT NULL,
+        customer_name VARCHAR(255) NOT NULL,
+        item_code VARCHAR(50) NOT NULL,
+        product_name VARCHAR(255) NOT NULL,
+        quantity INTEGER NOT NULL,
+        total_value DECIMAL(12,2) NOT NULL,
+        priority VARCHAR(20) DEFAULT 'medium',
+        status VARCHAR(20) DEFAULT 'processing',
+        order_date DATE,
+        ship_date DATE,
+        delivery_date DATE,
+        tracking_number VARCHAR(100),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    console.log('✅ Order shipments table created/verified');
+  } catch (err) {
+    console.error('❌ Error creating order shipments table:', err);
     throw err;
   }
 };
@@ -483,7 +514,7 @@ const createMaterialShipment = async (shipmentData) => {
     const sql = await database.sql();
     const {
       shipment_id,
-      material_id,
+      bom_id,      
       category_id,
       material_name,
       quantity,
@@ -501,11 +532,11 @@ const createMaterialShipment = async (shipmentData) => {
     
     const result = await sql`
       INSERT INTO material_shipments (
-        shipment_id, material_id, category_id, material_name, quantity, unit, 
+        shipment_id, bom_id, category_id, material_name, quantity, unit, 
         shipment_type, source, destination, status, date_shipped, 
         estimated_delivery, received_date, handled_by, notes, updated_at
       ) VALUES (
-        ${shipment_id}, ${material_id}, ${category_id}, ${material_name}, 
+        ${shipment_id}, ${bom_id}, ${category_id}, ${material_name}, 
         ${quantity}, ${unit}, ${shipment_type}, ${source}, ${destination}, 
         ${status}, ${date_shipped}, ${estimated_delivery}, ${received_date}, 
         ${handled_by}, ${notes}, CURRENT_TIMESTAMP
@@ -526,7 +557,7 @@ const updateMaterialShipment = async (id, shipmentData) => {
     const sql = await database.sql();
     const {
       shipment_id,
-      material_id,
+      bom_id,        // Changed from material_id
       category_id,
       material_name,
       quantity,
@@ -545,7 +576,7 @@ const updateMaterialShipment = async (id, shipmentData) => {
     const result = await sql`
       UPDATE material_shipments SET
         shipment_id = ${shipment_id},
-        material_id = ${material_id},
+        bom_id = ${bom_id},        /* Changed from material_id */
         category_id = ${category_id},
         material_name = ${material_name},
         quantity = ${quantity},
@@ -660,10 +691,220 @@ const getShipmentsByCategoryId = async (categoryId) => {
   }
 };
 
+// Get all order shipments with optional filters
+const getAllOrderShipments = async (filters = {}) => {
+  try {
+    const sql = await database.sql();
+    let base = sql`
+      SELECT * FROM order_shipments
+    `;
+
+    const conditions = [];
+    const params = [];
+
+    if (filters.search) {
+      conditions.push(`(order_id ILIKE $${params.length + 1} OR customer_name ILIKE $${params.length + 1} OR product_name ILIKE $${params.length + 1} OR item_code ILIKE $${params.length + 1})`);
+      params.push(`%${filters.search}%`);
+    }
+    if (filters.status) {
+      conditions.push(`status = $${params.length + 1}`);
+      params.push(filters.status);
+    }
+    if (filters.priority) {
+      conditions.push(`priority = $${params.length + 1}`);
+      params.push(filters.priority);
+    }
+    if (filters.date) {
+      conditions.push(`order_date = $${params.length + 1}`);
+      params.push(filters.date);
+    }
+
+    if (conditions.length > 0) {
+      const whereClause = ` WHERE ${conditions.join(' AND ')}`;
+      base = sql`
+        SELECT * FROM order_shipments
+        ${sql.unsafe(whereClause)}
+        ORDER BY created_at DESC
+      `;
+    } else {
+      base = sql`
+        SELECT * FROM order_shipments
+        ORDER BY created_at DESC
+      `;
+    }
+
+    const result = await base;
+    return result;
+  } catch (err) {
+    console.error('Error fetching order shipments:', err);
+    throw err;
+  }
+};
+
+// Get order shipment by ID
+const getOrderShipmentById = async (id) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      SELECT * FROM order_shipments WHERE id = ${id}
+    `;
+    return result[0] || null;
+  } catch (err) {
+    console.error('Error fetching order shipment:', err);
+    throw err;
+  }
+};
+
+// Create new order shipment
+const createOrderShipment = async (orderData) => {
+  try {
+    const sql = await database.sql();
+    const {
+      order_id,
+      customer_name,
+      item_code,
+      product_name,
+      quantity,
+      total_value,
+      priority,
+      status,
+      order_date,
+      ship_date,
+      delivery_date,
+      tracking_number,
+      notes
+    } = orderData;
+
+    const result = await sql`
+      INSERT INTO order_shipments (
+        order_id, customer_name, item_code, product_name, quantity, total_value,
+        priority, status, order_date, ship_date, delivery_date, tracking_number, notes, updated_at
+      ) VALUES (
+        ${order_id}, ${customer_name}, ${item_code}, ${product_name}, ${quantity}, ${total_value},
+        ${priority || 'medium'}, ${status || 'processing'}, ${order_date}, ${ship_date}, ${delivery_date}, ${tracking_number}, ${notes}, CURRENT_TIMESTAMP
+      )
+      RETURNING *
+    `;
+
+    return result[0];
+  } catch (err) {
+    console.error('Error creating order shipment:', err);
+    throw err;
+  }
+};
+
+// Update order shipment
+const updateOrderShipment = async (id, orderData) => {
+  try {
+    const sql = await database.sql();
+    const {
+      order_id,
+      customer_name,
+      item_code,
+      product_name,
+      quantity,
+      total_value,
+      priority,
+      status,
+      order_date,
+      ship_date,
+      delivery_date,
+      tracking_number,
+      notes
+    } = orderData;
+
+    const result = await sql`
+      UPDATE order_shipments SET
+        order_id = ${order_id},
+        customer_name = ${customer_name},
+        item_code = ${item_code},
+        product_name = ${product_name},
+        quantity = ${quantity},
+        total_value = ${total_value},
+        priority = ${priority},
+        status = ${status},
+        order_date = ${order_date},
+        ship_date = ${ship_date},
+        delivery_date = ${delivery_date},
+        tracking_number = ${tracking_number},
+        notes = ${notes},
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    return result[0];
+  } catch (err) {
+    console.error('Error updating order shipment:', err);
+    throw err;
+  }
+};
+
+// Delete order shipment
+const deleteOrderShipment = async (id) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      DELETE FROM order_shipments WHERE id = ${id}
+      RETURNING *
+    `;
+    return result[0];
+  } catch (err) {
+    console.error('Error deleting order shipment:', err);
+    throw err;
+  }
+};
+
+// Get order shipment statistics
+const getOrderShipmentStats = async () => {
+  try {
+    const sql = await database.sql();
+    const total = await sql`SELECT COUNT(*) as count FROM order_shipments`;
+    const delivered = await sql`SELECT COUNT(*) as count FROM order_shipments WHERE status = 'delivered'`;
+    const shipped = await sql`SELECT COUNT(*) as count FROM order_shipments WHERE status = 'shipped'`;
+    const processing = await sql`SELECT COUNT(*) as count FROM order_shipments WHERE status = 'processing'`;
+
+    return {
+      totalOrders: parseInt(total[0].count),
+      deliveredOrders: parseInt(delivered[0].count),
+      shippedOrders: parseInt(shipped[0].count),
+      processingOrders: parseInt(processing[0].count)
+    };
+  } catch (err) {
+    console.error('Error fetching order shipment statistics:', err);
+    throw err;
+  }
+};
+
+// Update order shipment status
+const updateOrderShipmentStatus = async (id, status, options = {}) => {
+  try {
+    const sql = await database.sql();
+    const setShipDate = options.setShipDate ? options.setShipDate : null;
+    const setDeliveryDate = options.setDeliveryDate ? options.setDeliveryDate : null;
+
+    const result = await sql`
+      UPDATE order_shipments
+      SET status = ${status},
+          ship_date = COALESCE(${setShipDate}, ship_date),
+          delivery_date = COALESCE(${setDeliveryDate}, delivery_date),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    return result[0];
+  } catch (err) {
+    console.error('Error updating order status:', err);
+    throw err;
+  }
+};
+
 
 module.exports = {
   initializeInventoryTable,
   initializeMaterialShipmentsTable,
+  initializeOrderShipmentsTable,
   getAllInventoryItems,
   getInventoryItemById,
   createInventoryItem,
@@ -681,5 +922,12 @@ module.exports = {
   deleteMaterialShipment,
   getMaterialShipmentStats,
   updateShipmentStatus,
-  getShipmentsByCategoryId
+  getShipmentsByCategoryId,
+  getAllOrderShipments,
+  getOrderShipmentById,
+  createOrderShipment,
+  updateOrderShipment,
+  deleteOrderShipment,
+  getOrderShipmentStats,
+  updateOrderShipmentStatus
 };
