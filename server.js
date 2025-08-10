@@ -17,6 +17,7 @@ const {
 } = require('./database');
 const {
   initializeInventoryTable,
+  initializeMaterialShipmentsTable,
   getAllInventoryItems,
   getInventoryItemById,
   createInventoryItem,
@@ -26,7 +27,16 @@ const {
   getAllCategories,
   getAllWarehouses,
   getInventoryStats,
-  updateItemQuantity
+  updateItemQuantity,
+  getAllMaterialShipments,
+  getMaterialShipmentById,
+  createMaterialShipment,
+  updateMaterialShipment,
+  deleteMaterialShipment,
+  getMaterialShipmentStats,
+  updateShipmentStatus,
+  getShipmentsByItemCode,
+  getInventoryImpactSummary
 } = require('./inventory');
 require('dotenv').config();
 
@@ -580,6 +590,200 @@ app.get('/api/test-inventory', async (req, res) => {
   }
 });
 
+// Material Shipment API Endpoints
+
+// Get all material shipments
+app.get('/api/material-shipments', requireAuth, async (req, res) => {
+  try {
+    const filters = {
+      search: req.query.search || '',
+      status: req.query.status || '',
+      type: req.query.type || '',
+      date: req.query.date || ''
+    };
+    
+    const shipments = await getAllMaterialShipments(filters);
+    res.json({ success: true, data: shipments });
+  } catch (err) {
+    console.error('Error fetching material shipments:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Get inventory impact summary
+app.get('/api/material-shipments/impact', requireAuth, async (req, res) => {
+  try {
+    const impactSummary = await getInventoryImpactSummary();
+    res.json(impactSummary);
+  } catch (error) {
+    console.error('Error getting inventory impact summary:', error);
+    res.status(500).json({ error: 'Failed to get inventory impact summary' });
+  }
+});
+
+// Get material shipment by ID
+app.get('/api/material-shipments/:id', requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid ID format' });
+    }
+    
+    const shipment = await getMaterialShipmentById(id);
+    if (!shipment) {
+      return res.status(404).json({ success: false, message: 'Shipment not found' });
+    }
+    
+    res.json({ success: true, data: shipment });
+  } catch (err) {
+    console.error('Error fetching material shipment:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Create new material shipment
+app.post('/api/material-shipments', requireAuth, async (req, res) => {
+  try {
+    const shipmentData = req.body;
+    
+    // Validate required fields
+    if (!shipmentData.shipment_id || !shipmentData.material_name || !shipmentData.quantity) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields: shipment_id, material_name, quantity' 
+      });
+    }
+    
+    const shipment = await createMaterialShipment(shipmentData);
+    
+    // Create notification
+    await createNotification(
+      'New Material Shipment',
+      `New shipment ${shipment.shipment_id} created for ${shipment.material_name}`,
+      'info'
+    );
+    
+    res.json({ success: true, data: shipment, message: 'Shipment created successfully' });
+  } catch (err) {
+    console.error('Error creating material shipment:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Update material shipment
+app.put('/api/material-shipments/:id', requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid ID format' });
+    }
+    
+    const shipmentData = req.body;
+    const shipment = await updateMaterialShipment(id, shipmentData);
+    
+    if (!shipment) {
+      return res.status(404).json({ success: false, message: 'Shipment not found' });
+    }
+    
+    // Create notification
+    await createNotification(
+      'Shipment Updated',
+      `Shipment ${shipment.shipment_id} has been updated`,
+      'info'
+    );
+    
+    res.json({ success: true, data: shipment, message: 'Shipment updated successfully' });
+  } catch (err) {
+    console.error('Error updating material shipment:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Delete material shipment
+app.delete('/api/material-shipments/:id', requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid ID format' });
+    }
+    
+    const shipment = await deleteMaterialShipment(id);
+    
+    if (!shipment) {
+      return res.status(404).json({ success: false, message: 'Shipment not found' });
+    }
+    
+    // Create notification
+    await createNotification(
+      'Shipment Deleted',
+      `Shipment ${shipment.shipment_id} has been deleted`,
+      'info'
+    );
+    
+    res.json({ success: true, data: shipment, message: 'Shipment deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting material shipment:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Get material shipment statistics
+app.get('/api/material-shipments/stats', requireAuth, async (req, res) => {
+  try {
+    const stats = await getMaterialShipmentStats();
+    res.json({ success: true, data: stats });
+  } catch (err) {
+    console.error('Error fetching material shipment statistics:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Update shipment status
+app.patch('/api/material-shipments/:id/status', requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid ID format' });
+    }
+    
+    const { status, received_date } = req.body;
+    
+    if (!status) {
+      return res.status(400).json({ success: false, message: 'Status is required' });
+    }
+    
+    const shipment = await updateShipmentStatus(id, status, received_date);
+    
+    if (!shipment) {
+      return res.status(404).json({ success: false, message: 'Shipment not found' });
+    }
+    
+    // Create notification
+    await createNotification(
+      'Shipment Status Updated',
+      `Shipment ${shipment.shipment_id} status changed to ${status}`,
+      'info'
+    );
+    
+    res.json({ success: true, data: shipment, message: 'Status updated successfully' });
+  } catch (err) {
+    console.error('Error updating shipment status:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Get shipments by inventory item
+app.get('/api/material-shipments/item/:itemCode', requireAuth, async (req, res) => {
+  try {
+    const itemCode = req.params.itemCode;
+    const shipments = await getShipmentsByItemCode(itemCode);
+    res.json({ success: true, data: shipments });
+  } catch (err) {
+    console.error('Error fetching shipments by item code:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Initialize database and start server
 const startServer = async () => {
   try {
@@ -587,6 +791,15 @@ const startServer = async () => {
     try {
       await initializeDatabase();
       console.log(`🗄️ Database: Connected to Neon PostgreSQL`);
+      
+      // Initialize inventory and material shipments tables
+      try {
+        await initializeInventoryTable();
+        await initializeMaterialShipmentsTable();
+        console.log(`📦 Inventory and Material Shipments tables initialized`);
+      } catch (tableError) {
+        console.log(`⚠️ Table initialization failed:`, tableError.message);
+      }
     } catch (dbError) {
       console.log(`⚠️ Database connection failed, running in mock mode`);
     }
