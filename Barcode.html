@@ -386,6 +386,84 @@
     .quantity-actions .btn {
       margin: 0.25rem;
     }
+    
+    .barcode-section {
+      border-top: 1px solid var(--border-color);
+      padding-top: 1rem;
+    }
+    
+    .barcode-item {
+      text-align: center;
+      padding: 0.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background-color: var(--main-bg);
+    }
+    
+    .barcode-display {
+      margin: 0.5rem 0;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: white;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+    }
+    
+    .barcode-display canvas {
+      max-width: 100%;
+      height: auto;
+    }
+    
+    .barcode-items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .barcode-item-card {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      background-color: var(--main-bg);
+      transition: all 0.3s ease;
+    }
+    
+    .barcode-item-card:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    
+    .barcode-item-card h6 {
+      margin-bottom: 0.5rem;
+      color: var(--primary-color);
+    }
+    
+    .barcode-item-card .item-info {
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+    
+    .barcode-item-card .barcode-preview {
+      text-align: center;
+      margin: 1rem 0;
+      padding: 0.5rem;
+      background-color: white;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .barcode-item-card .barcode-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
   </style>
 </head>
 <body>
@@ -474,13 +552,12 @@
           <div class="user-avatar me-2" id="userAvatar">SC</div>
           <div class="d-none d-md-block">
             <div id="userName" style="font-size: 0.875rem; font-weight: 600; line-height: 1.2;">John Doe</div>
-            <div style="font-size: 0.75rem; color: var(--body-font); line-height: 1.2;">Scanner Operator</div>
           </div>
           <i class="bi bi-chevron-down ms-2"></i>
         </a>
         <div class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
           <div class="px-3 py-2 border-bottom">
-            <div class="fw-bold" id="userFullNameDropdown">Scanner Operator</div>
+            <div class="fw-bold" id="userFullNameDropdown">John Doe</div>
             <div class="text-muted small" id="userEmailDropdown">scanner@foxcontrolhub.com</div>
           </div>
           <a class="dropdown-item" href="#" onclick="showProfileModal()">
@@ -528,14 +605,12 @@
     <div class="col-lg-10 col-md-9 p-3">
       <!-- Top Panel -->
       <div class="top-panel">
-        <h4 class="fw-bold">Barcode/RFID Scanner</h4>
+        <h4 class="fw-bold">Barcode Scanner</h4>
         <div class="d-flex flex-wrap justify-content-start action-buttons">
           <button class="btn" onclick="startBarcodeScanner()">
             <i class="bi bi-upc-scan"></i>Start Barcode Scanner
           </button>
-          <button class="btn" onclick="startRFIDScanner()">
-            <i class="bi bi-broadcast"></i>Start RFID Scanner
-          </button>
+
           <button class="btn" onclick="exportScanHistory()">
             <i class="bi bi-download"></i>Export History
           </button>
@@ -544,6 +619,9 @@
           </button>
           <button class="btn" onclick="loadInventoryData()">
             <i class="bi bi-arrow-clockwise"></i>Refresh Data
+          </button>
+          <button class="btn" onclick="loadScanHistoryFromDatabase()">
+            <i class="bi bi-database"></i>Load History
           </button>
         </div>
       </div>
@@ -560,9 +638,6 @@
 
         <!-- Scanner Controls -->
         <div class="scanner-controls">
-          <button class="btn btn-outline-primary" onclick="toggleScannerMode()" id="modeToggle">
-            <i class="bi bi-toggle-off"></i> Barcode Mode
-          </button>
           <button class="btn btn-outline-success" onclick="continuousScan()" id="continuousBtn">
             <i class="bi bi-arrow-repeat"></i> Continuous Scan
           </button>
@@ -603,6 +678,39 @@
           <div class="text-center text-muted py-4">
             <i class="bi bi-inbox" style="font-size: 2rem;"></i>
             <p>No scans yet. Start scanning to see history here.</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Barcode Generation Section -->
+      <div class="scanner-card">
+        <h5><i class="bi bi-upc-scan me-2"></i>Inventory Barcode Generator</h5>
+        <p class="text-muted">Generate barcodes for inventory items</p>
+        
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label">Search Items</label>
+            <input type="text" class="form-control" id="barcodeSearchInput" 
+                   placeholder="Search by name or code..." onkeyup="filterBarcodeItems()">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Category</label>
+            <select class="form-select" id="barcodeCategoryFilter" onchange="filterBarcodeItems()">
+              <option value="">All Categories</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Warehouse</label>
+            <select class="form-select" id="barcodeWarehouseFilter" onchange="filterBarcodeItems()">
+              <option value="">All Warehouses</option>
+            </select>
+            </div>
+        </div>
+        
+        <div class="barcode-items-grid" id="barcodeItemsGrid">
+          <div class="text-center text-muted py-4">
+            <i class="bi bi-upc-scan" style="font-size: 2rem;"></i>
+            <p>Loading inventory items...</p>
           </div>
         </div>
       </div>
@@ -864,7 +972,14 @@ async function loadInitialData() {
     if (inventoryResponse.success) {
       inventoryData = mapInventoryData(inventoryResponse.data);
       showMessage('Inventory data loaded successfully');
-    }
+      
+          // After loading inventory, load scan history from database
+    await loadScanHistoryFromDatabase();
+    
+    // Populate barcode generation section
+    populateBarcodeItems();
+    populateBarcodeFilters();
+  }
     
     if (categoriesResponse.success) {
       categoriesData = categoriesResponse.data;
@@ -940,11 +1055,7 @@ function startBarcodeScanner() {
   startScanning();
 }
 
-function startRFIDScanner() {
-  scannerMode = 'rfid';
-  updateScannerMode();
-  startScanning();
-}
+
 
 function startScanning() {
   isScanning = true;
@@ -1039,23 +1150,67 @@ async function processScan(code, type) {
     item: null
   };
   
-  // Try to find item in inventory
+  // Try to find item in inventory using multiple barcode formats
   if (inventoryData.length > 0) {
-    const foundItem = inventoryData.find(item => 
-      item.itemCode === code || 
-      item.id.toString() === code ||
-      `${item.itemCode}-${item.id}` === code
-    );
+    const foundItem = inventoryData.find(item => {
+      // Check exact item code match
+      if (item.itemCode === code) return true;
+      
+      // Check ID match
+      if (item.id.toString() === code) return true;
+      
+      // Check combined format (itemCode-id)
+      if (`${item.itemCode}-${item.id}` === code) return true;
+      
+      // Check if code contains item code (for partial matches)
+      if (code.includes(item.itemCode)) return true;
+      
+      // Check if item code contains the scanned code (for partial matches)
+      if (item.itemCode.includes(code)) return true;
+      
+      return false;
+    });
     
     if (foundItem) {
       scanData.item = foundItem;
       scanData.status = 'found';
+      scanData.itemId = foundItem.id;
+      scanData.productName = foundItem.productName;
+      scanData.quantity = foundItem.totalQuantity;
     } else {
       scanData.status = 'not_found';
     }
   }
   
-  // Add to history
+  // Save to database
+  try {
+    const dbScanData = {
+      code: code,
+      type: type,
+      itemId: scanData.itemId || null,
+      productName: scanData.productName || null,
+      quantity: scanData.quantity || 1,
+      status: scanData.status,
+      scannedBy: currentUser?.username || 'unknown',
+      notes: `Scanned at ${timestamp.toLocaleString()}`
+    };
+    
+    // Try to save to database
+    const savedScan = await apiCall('/scan-history', {
+      method: 'POST',
+      body: JSON.stringify(dbScanData)
+    });
+    
+    if (savedScan.success) {
+      scanData.dbId = savedScan.data.id;
+      scanData.dbCreatedAt = savedScan.data.created_at;
+    }
+  } catch (error) {
+    console.error('Error saving scan to database:', error);
+    // Continue with local storage if database fails
+  }
+  
+  // Add to local history
   scanHistory.unshift(scanData);
   
   // Limit history size
@@ -1083,6 +1238,61 @@ async function processScan(code, type) {
   
   // Log activity
   logActivity('scan', code, type, scanData.item?.productName || 'Unknown', scanData.status);
+}
+
+// Barcode generation function
+function generateBarcode(text, elementId) {
+  try {
+    // Simple barcode generation using canvas
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const width = 200;
+    const height = 60;
+    
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Clear canvas
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, width, height);
+    
+    // Draw barcode bars (simple representation)
+    ctx.fillStyle = 'black';
+    const barWidth = 2;
+    let x = 10;
+    
+    for (let i = 0; i < text.length; i++) {
+      const charCode = text.charCodeAt(i);
+      const barHeight = (charCode % 3 + 1) * 15 + 10;
+      const y = (height - barHeight) / 2;
+      
+      ctx.fillRect(x, y, barWidth, barHeight);
+      x += barWidth + 1;
+      
+      // Add some spacing between characters
+      if (i < text.length - 1) {
+        x += 2;
+      }
+    }
+    
+    // Add text below barcode
+    ctx.fillStyle = 'black';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, width / 2, height - 5);
+    
+    // Display the barcode
+    const barcodeDiv = document.getElementById(`barcode-${elementId}`);
+    if (barcodeDiv) {
+      barcodeDiv.innerHTML = '';
+      barcodeDiv.appendChild(canvas);
+    }
+    
+    showMessage(`Barcode generated for: ${text}`, 'success');
+  } catch (error) {
+    console.error('Error generating barcode:', error);
+    showMessage('Error generating barcode', 'error');
+  }
 }
 
 function showScanResult(scanData) {
@@ -1306,6 +1516,39 @@ function showItemDetails(item) {
         <button class="btn btn-sm btn-info" onclick="setQuickQuantity(50)">+50</button>
         <button class="btn btn-sm btn-primary" onclick="setQuickQuantity(100)">+100</button>
       </div>
+      
+      <div class="barcode-section mt-3">
+        <h6>Generated Barcodes:</h6>
+        <div class="row g-2">
+          <div class="col-md-4">
+            <div class="barcode-item">
+              <strong>Item Code:</strong> ${item.itemCode}
+              <div class="barcode-display" id="barcode-${item.itemCode}"></div>
+              <button class="btn btn-sm btn-outline-primary mt-1" onclick="generateBarcode('${item.itemCode}', '${item.itemCode}')">
+                <i class="bi bi-upc-scan"></i> Generate
+              </button>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="barcode-item">
+              <strong>ID:</strong> ${item.id}
+              <div class="barcode-display" id="barcode-id-${item.id}"></div>
+              <button class="btn btn-sm btn-outline-primary mt-1" onclick="generateBarcode('${item.id}', 'id-${item.id}')">
+                <i class="bi bi-upc-scan"></i> Generate
+              </button>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="barcode-item">
+              <strong>Combined:</strong> ${item.itemCode}-${item.id}
+              <div class="barcode-display" id="barcode-combined-${item.id}"></div>
+              <button class="btn btn-sm btn-outline-primary mt-1" onclick="generateBarcode('${item.itemCode}-${item.id}', 'combined-${item.id}')">
+                <i class="bi bi-upc-scan"></i> Generate
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
   
@@ -1402,13 +1645,70 @@ function exportScanHistory() {
   document.body.removeChild(link);
 }
 
-function clearScanHistory() {
-  if (confirm('Are you sure you want to clear all scan history?')) {
+async function clearScanHistory() {
+  if (confirm('Are you sure you want to clear all scan history? This will clear both local and database history.')) {
+    try {
+      // Clear from database
+      const response = await apiCall('/scan-history', {
+        method: 'DELETE'
+      });
+      
+      if (response.success) {
+        showMessage('Database scan history cleared successfully', 'success');
+      }
+    } catch (error) {
+      console.error('Error clearing database history:', error);
+      showMessage('Database history could not be cleared', 'warning');
+    }
+    
+    // Clear local history
     scanHistory = [];
     updateScanHistory();
     updateScanCount();
     document.getElementById('scanResult').style.display = 'none';
-    showMessage('Scan history cleared', 'info');
+    showMessage('Local scan history cleared', 'info');
+  }
+}
+
+async function loadScanHistoryFromDatabase() {
+  try {
+    showLoading(true);
+    const response = await apiCall('/scan-history');
+    
+    if (response.success && response.data) {
+      // Convert database format to local format
+      const dbHistory = response.data.map(dbScan => ({
+        id: dbScan.id,
+        code: dbScan.scanned_code,
+        type: dbScan.scan_type,
+        timestamp: new Date(dbScan.created_at),
+        status: dbScan.scan_status,
+        item: dbScan.item_id ? inventoryData.find(item => item.id === dbScan.item_id) : null,
+        itemId: dbScan.item_id,
+        productName: dbScan.product_name,
+        quantity: dbScan.quantity,
+        dbId: dbScan.id,
+        dbCreatedAt: dbScan.created_at,
+        notes: dbScan.notes
+      }));
+      
+      // Merge with local history, avoiding duplicates
+      const existingIds = new Set(scanHistory.map(scan => scan.dbId || scan.id));
+      const newDbScans = dbHistory.filter(dbScan => !existingIds.has(dbScan.dbId));
+      
+      if (newDbScans.length > 0) {
+        scanHistory = [...newDbScans, ...scanHistory];
+        showMessage(`Loaded ${newDbScans.length} scans from database`, 'success');
+      }
+      
+      updateScanHistory();
+      updateScanCount();
+    }
+  } catch (error) {
+    console.error('Error loading scan history from database:', error);
+    showMessage('Could not load scan history from database', 'warning');
+  } finally {
+    showLoading(false);
   }
 }
 
@@ -1834,6 +2134,133 @@ async function loadInventoryData() {
     console.error('Error refreshing inventory data:', error);
     showMessage('Error refreshing inventory data', 'error');
   }
+}
+
+// Barcode generation functions
+function populateBarcodeItems() {
+  const grid = document.getElementById('barcodeItemsGrid');
+  
+  if (!inventoryData || inventoryData.length === 0) {
+    grid.innerHTML = `
+      <div class="text-center text-muted py-4">
+        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+        <p>No inventory items found. Please refresh data.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  grid.innerHTML = inventoryData.map(item => {
+    const category = categoriesData.find(c => c.category_id === item.categoryId);
+    const warehouse = warehousesData.find(w => w.warehouse_id === item.warehouseId);
+    
+    return `
+      <div class="barcode-item-card">
+        <h6>${item.productName}</h6>
+        <div class="item-info">
+          <strong>Code:</strong> ${item.itemCode}<br>
+          <strong>Category:</strong> ${category?.category_name || 'N/A'}<br>
+          <strong>Warehouse:</strong> ${warehouse?.warehouse_name || 'N/A'}<br>
+          <strong>Quantity:</strong> ${item.totalQuantity} ${item.unitOfMeasure}
+        </div>
+        
+        <div class="barcode-preview" id="barcode-preview-${item.id}">
+          <span class="text-muted">Click generate to create barcode</span>
+        </div>
+        
+        <div class="barcode-actions">
+          <button class="btn btn-sm btn-outline-primary" onclick="generateBarcode('${item.itemCode}', 'preview-${item.id}')">
+            <i class="bi bi-upc-scan"></i> Item Code
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="generateBarcode('${item.id}', 'preview-${item.id}')">
+            <i class="bi bi-hash"></i> ID
+          </button>
+          <button class="btn btn-sm btn-outline-info" onclick="generateBarcode('${item.itemCode}-${item.id}', 'preview-${item.id}')">
+            <i class="bi bi-link"></i> Combined
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function populateBarcodeFilters() {
+  const categoryFilter = document.getElementById('barcodeCategoryFilter');
+  const warehouseFilter = document.getElementById('barcodeWarehouseFilter');
+  
+  // Populate category filter
+  if (categoriesData && categoriesData.length > 0) {
+    categoryFilter.innerHTML = '<option value="">All Categories</option>' +
+      categoriesData.map(cat => `<option value="${cat.category_id}">${cat.category_name}</option>`).join('');
+  }
+  
+  // Populate warehouse filter
+  if (warehousesData && warehousesData.length > 0) {
+    warehouseFilter.innerHTML = '<option value="">All Warehouses</option>' +
+      warehousesData.map(wh => `<option value="${wh.warehouse_id}">${wh.warehouse_name}</option>`).join('');
+  }
+}
+
+function filterBarcodeItems() {
+  const searchTerm = document.getElementById('barcodeSearchInput').value.toLowerCase();
+  const categoryFilter = document.getElementById('barcodeCategoryFilter').value;
+  const warehouseFilter = document.getElementById('barcodeWarehouseFilter').value;
+  
+  const filteredItems = inventoryData.filter(item => {
+    const matchesSearch = !searchTerm || 
+      item.productName.toLowerCase().includes(searchTerm) ||
+      item.itemCode.toLowerCase().includes(searchTerm);
+    
+    const matchesCategory = !categoryFilter || item.categoryId === categoryFilter;
+    const matchesWarehouse = !warehouseFilter || item.warehouseId === warehouseFilter;
+    
+    return matchesSearch && matchesCategory && matchesWarehouse;
+  });
+  
+  const grid = document.getElementById('barcodeItemsGrid');
+  
+  if (filteredItems.length === 0) {
+    grid.innerHTML = `
+      <div class="text-center text-muted py-4">
+        <i class="bi bi-search" style="font-size: 2rem;"></i>
+        <p>No items match your filters.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  grid.innerHTML = filteredItems.map(item => {
+    const category = categoriesData.find(c => c.category_id === item.categoryId);
+    const warehouse = warehousesData.find(w => w.warehouse_id === item.warehouseId);
+    
+    return `
+      <div class="barcode-item-card">
+        <h6>${item.productName}</h6>
+        <div class="item-info">
+          <strong>Code:</strong> ${item.itemCode}<br>
+          <strong>Category:</strong> ${category?.category_name || 'N/A'}<br>
+          <strong>Warehouse:</strong> ${warehouse?.warehouse_name || 'N/A'}<br>
+          <strong>Quantity:</strong> ${item.totalQuantity} ${item.unitOfMeasure}
+        </div>
+        
+        <div class="barcode-preview" id="barcode-preview-${item.id}">
+          <span class="text-muted">Click generate to create barcode</span>
+        </div>
+        
+        <div class="barcode-actions">
+          <button class="btn btn-sm btn-outline-primary" onclick="generateBarcode('${item.itemCode}', 'preview-${item.id}')">
+            <i class="bi bi-upc-scan"></i> Item Code
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="generateBarcode('${item.id}', 'preview-${item.id}')">
+            <i class="bi bi-hash"></i> ID
+          </button>
+          <button class="btn btn-sm btn-outline-info" onclick="generateBarcode('${item.itemCode}-${item.id}', 'preview-${item.id}')">
+            <i class="bi bi-link"></i> Combined
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 </script>
 </body>

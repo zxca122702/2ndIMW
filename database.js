@@ -34,7 +34,23 @@ const testConnection = async () => {
       )
     `;
     
-    console.log('✅ Users and notifications tables created/verified');
+    // Create scan history table if it doesn't exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS scan_history (
+        id SERIAL PRIMARY KEY,
+        scanned_code VARCHAR(100) NOT NULL,
+        scan_type VARCHAR(20) DEFAULT 'barcode',
+        item_id INTEGER,
+        product_name VARCHAR(255),
+        quantity INTEGER DEFAULT 1,
+        scan_status VARCHAR(20) DEFAULT 'found',
+        scanned_by VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        notes TEXT
+      )
+    `;
+    
+    console.log('✅ Users, notifications, and scan history tables created/verified');
   } catch (err) {
     console.error('❌ Database connection error:', err);
   }
@@ -197,6 +213,50 @@ const getUnreadNotificationCount = async () => {
   }
 };
 
+// Scan history functions
+const saveScanHistory = async (scanData) => {
+  try {
+    const result = await sql`
+      INSERT INTO scan_history (
+        scanned_code, scan_type, item_id, product_name, 
+        quantity, scan_status, scanned_by, notes
+      ) VALUES (
+        ${scanData.code}, ${scanData.type}, ${scanData.itemId || null}, 
+        ${scanData.productName || null}, ${scanData.quantity || 1}, 
+        ${scanData.status}, ${scanData.scannedBy || 'unknown'}, ${scanData.notes || null}
+      ) RETURNING id, created_at
+    `;
+    return result[0];
+  } catch (err) {
+    console.error('Save scan history error:', err);
+    return null;
+  }
+};
+
+const getScanHistory = async (limit = 100) => {
+  try {
+    const result = await sql`
+      SELECT * FROM scan_history 
+      ORDER BY created_at DESC 
+      LIMIT ${limit}
+    `;
+    return result;
+  } catch (err) {
+    console.error('Get scan history error:', err);
+    return [];
+  }
+};
+
+const clearScanHistory = async () => {
+  try {
+    await sql`DELETE FROM scan_history`;
+    return true;
+  } catch (err) {
+    console.error('Clear scan history error:', err);
+    return false;
+  }
+};
+
 module.exports = {
   sql,
   testConnection,
@@ -206,6 +266,8 @@ module.exports = {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
-  getUnreadNotificationCount
-
+  getUnreadNotificationCount,
+  saveScanHistory,
+  getScanHistory,
+  clearScanHistory
 };
