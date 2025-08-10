@@ -8,23 +8,39 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <style>
     :root {
-      --primary-color: #d19000;
-      --secondary-color: #f9c66b;
-      --border-color: #dee2e6;
-      --success-color: #198754;
-      --danger-color: #dc3545;
-      --warning-color: #ffc107;
+      --primary-color: #CC79F0;
+      --secondary-color: #3E7EF7;
+      --border-color: #F3F3F3;
+      --success-color: #00B146;
+      --danger-color: #CF2C3A;
+      --warning-color: #FFA300;
+      --main-bg: #FDFFFA;
+      --bg-shadow: #F3F3F3;
+      --table-row1: #F7F5FC;
+      --table-row2: #F1EDF9;
+      --table-bg: #F8F8F8;
+      --bar-graph: #6E62BF;
+      --confirmed: #1979FE;
+      --header-color: #333135;
+      --sub-header: #5F5B62;
+      --tertiary-header: #2E2E38;
+      --body-font: #4A4A4A;
+      --pie-color1: #8979FF;
+      --pie-color2: #FF928A;
+      --pie-color3: #3CC3DF;
+      --pie-color4: #FFAE4C;
+      --pie-color5: #537FF1;
     }
 
     body {
-      background-color: #f8f9fa;
+      background-color: var(--main-bg);
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       font-size: 14px;
     }
 
     .sidebar {
       height: 100vh;
-      background-color: #fff;
+      background-color: var(--main-bg);
       border-right: 1px solid var(--border-color);
       position: sticky;
       top: 0;
@@ -32,7 +48,7 @@
     }
 
     .sidebar .nav-link {
-      color: #333;
+      color: var(--header-color);
       font-weight: 500;
       padding: 0.75rem 1rem;
       border-radius: 8px;
@@ -41,17 +57,17 @@
     }
 
     .sidebar .nav-link:hover {
-      background-color: #f8f9fa;
+      background-color: var(--bg-shadow);
       color: var(--primary-color);
     }
 
     .sidebar .nav-link.active {
       background-color: var(--secondary-color);
-      color: #000;
+      color: var(--main-bg);
     }
 
     .top-panel {
-      background-color: #e6e6e6;
+      background-color: var(--bg-shadow);
       border-radius: 15px;
       padding: 1.5rem;
       margin-bottom: 1.5rem;
@@ -71,7 +87,7 @@
     }
 
     .action-buttons .btn:hover {
-      background-color: #b8800a;
+      background-color: var(--tertiary-header);
       transform: translateY(-2px);
     }
 
@@ -81,10 +97,10 @@
     }
 
     .shipment-card {
-      border: 2px solid #0d6efd;
+      border: 2px solid var(--secondary-color);
       border-radius: 15px;
       padding: 1.5rem;
-      background: #fff;
+      background: var(--main-bg);
       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
       margin-bottom: 2rem;
     }
@@ -92,7 +108,7 @@
     .shipment-card h5 {
       font-weight: bold;
       margin-bottom: 1.5rem;
-      color: #0d6efd;
+      color: var(--secondary-color);
     }
 
     .table-container {
@@ -107,10 +123,10 @@
     }
 
     .table th {
-      background-color: #f8f9fa;
+      background-color: var(--table-row1);
       border-bottom: 2px solid var(--border-color);
       font-weight: 600;
-      color: #495057;
+      color: var(--sub-header);
       padding: 1rem 0.75rem;
       font-size: 0.875rem;
     }
@@ -118,11 +134,11 @@
     .table td {
       padding: 0.875rem 0.75rem;
       vertical-align: middle;
-      border-bottom: 1px solid #f1f3f4;
+      border-bottom: 1px solid var(--border-color);
     }
 
     .table tbody tr:hover {
-      background-color: #f8f9fa;
+      background-color: var(--table-row2);
     }
 
     .status-badge {
@@ -134,25 +150,25 @@
     }
 
     .status-delivered {
-      background-color: #d4edda;
-      color: #155724;
+      background-color: var(--success-color);
+      color: var(--main-bg);
     }
 
     .status-pending {
-      background-color: #fff3cd;
-      color: #856404;
+      background-color: var(--warning-color);
+      color: var(--main-bg);
     }
 
     .status-shipped {
-      background-color: #cce5ff;
-      color: #004085;
+      background-color: var(--confirmed);
+      color: var(--main-bg);
     }
 
     .item-actions i {
       cursor: pointer;
       margin: 0 0.5rem;
       font-size: 1.1rem;
-      color: #6c757d;
+      color: var(--body-font);
       transition: all 0.3s ease;
     }
 
@@ -162,7 +178,7 @@
     }
 
     .search-filter-section {
-      background: white;
+      background: var(--main-bg);
       border-radius: 10px;
       padding: 1.5rem;
       margin-bottom: 1.5rem;
@@ -175,7 +191,7 @@
 
     .filter-group label {
       font-weight: 600;
-      color: #495057;
+      color: var(--sub-header);
       margin-bottom: 0.5rem;
     }
 
@@ -228,7 +244,7 @@
 
     /* Top Navigation */
     .top-navbar {
-      background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+      background: linear-gradient(135deg, var(--main-bg) 0%, var(--bg-shadow) 100%);
       border-bottom: 1px solid var(--border-color);
       padding: 0.75rem 1.5rem;
       position: sticky;
@@ -244,7 +260,7 @@
     }
 
     .top-navbar .navbar-nav .nav-link {
-      color: #495057;
+      color: var(--sub-header);
       font-weight: 500;
       padding: 0.5rem 1rem;
       border-radius: 6px;
@@ -252,7 +268,7 @@
     }
 
     .top-navbar .navbar-nav .nav-link:hover {
-      background-color: #f8f9fa;
+      background-color: var(--bg-shadow);
       color: var(--primary-color);
     }
 
@@ -300,7 +316,7 @@
     }
 
     .dropdown-item:hover {
-      background-color: #f8f9fa;
+      background-color: var(--bg-shadow);
       color: var(--primary-color);
     }
 
@@ -310,12 +326,12 @@
 
     .notification-item {
       padding: 0.75rem 1.25rem;
-      border-bottom: 1px solid #f1f1f1;
+      border-bottom: 1px solid var(--border-color);
       transition: all 0.3s ease;
     }
 
     .notification-item:hover {
-      background-color: #f8f9fa;
+      background-color: var(--bg-shadow);
     }
 
     .notification-item:last-child {
@@ -325,23 +341,23 @@
     .notification-title {
       font-weight: 600;
       font-size: 0.875rem;
-      color: #495057;
+      color: var(--sub-header);
       margin-bottom: 0.25rem;
     }
 
     .notification-text {
       font-size: 0.75rem;
-      color: #6c757d;
+      color: var(--body-font);
       margin-bottom: 0.25rem;
     }
 
     .notification-time {
       font-size: 0.7rem;
-      color: #adb5bd;
+      color: var(--body-font);
     }
 
     .notification-unread {
-      background-color: #e3f2fd;
+      background-color: var(--table-row1);
       border-left: 3px solid var(--primary-color);
     }
 
@@ -440,7 +456,7 @@
           <div class="user-avatar me-2">JD</div>
           <div class="d-none d-md-block">
             <div style="font-size: 0.875rem; font-weight: 600; line-height: 1.2;">John Doe</div>
-            <div style="font-size: 0.75rem; color: #6c757d; line-height: 1.2;">Administrator</div>
+            <div style="font-size: 0.75rem; color: var(--body-font); line-height: 1.2;">Administrator</div>
           </div>
           <i class="bi bi-chevron-down ms-2"></i>
         </a>
