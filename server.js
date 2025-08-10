@@ -26,7 +26,15 @@ const {
   getAllCategories,
   getAllWarehouses,
   getInventoryStats,
-  updateItemQuantity
+  updateItemQuantity,
+  getAllMaterialShipments,
+  getMaterialShipmentById,
+  createMaterialShipment,
+  updateMaterialShipment,
+  deleteMaterialShipment,
+  getMaterialShipmentStats,
+  updateShipmentStatus,
+  getShipmentsByCategoryId
 } = require('./inventory');
 require('dotenv').config();
 
@@ -174,13 +182,20 @@ app.get('/api/notifications', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/notifications/count', requireAuth, async (req, res) => {
+app.get('/api/notifications/unread-count', requireAuth, async (req, res) => {
   try {
     const count = await getUnreadNotificationCount();
-    res.json({ success: true, count: count });
+    res.json({ 
+      success: true, 
+      count: count || 0 
+    });
   } catch (error) {
     console.error('Get notification count error:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch notification count' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch notification count',
+      count: 0
+    });
   }
 });
 
@@ -401,11 +416,20 @@ app.put('/api/inventory/:id', requireAuth, async (req, res) => {
 app.get('/api/categories', requireAuth, async (req, res) => {
   try {
     const categories = await getAllCategories();
-    res.json({ success: true, data: categories });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to fetch categories' });
+    res.json({ 
+      success: true, 
+      data: categories || [] 
+    });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch categories',
+      error: error.message
+    });
   }
 });
+
 
 // API: Get all warehouses
 app.get('/api/warehouses', requireAuth, async (req, res) => {
@@ -602,6 +626,90 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// Material Shipments API endpoints
+app.get('/api/material-shipments/stats', requireAuth, async (req, res) => {
+  try {
+    const stats = await getMaterialShipmentStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Error fetching material shipment stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch shipment statistics' });
+  }
+});
+
+app.get('/api/material-shipments', requireAuth, async (req, res) => {
+  try {
+    const { search, status, type, date } = req.query;
+    const filters = { search, status, type, date };
+    
+    const shipments = await getAllMaterialShipments(filters);
+    res.json({ 
+      success: true, 
+      data: shipments || [],
+      count: shipments ? shipments.length : 0
+    });
+  } catch (error) {
+    console.error('Error fetching material shipments:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch material shipments',
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/material-shipments/:id', requireAuth, async (req, res) => {
+  try {
+    const shipment = await getMaterialShipmentById(req.params.id);
+    if (shipment) {
+      res.json({ success: true, data: shipment });
+    } else {
+      res.status(404).json({ success: false, message: 'Shipment not found' });
+    }
+  } catch (error) {
+    console.error('Error fetching material shipment:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch shipment' });
+  }
+});
+
+app.post('/api/material-shipments', requireAuth, async (req, res) => {
+  try {
+    const newShipment = await createMaterialShipment(req.body);
+    res.json({ success: true, message: 'Shipment created successfully', data: newShipment });
+  } catch (error) {
+    console.error('Error creating material shipment:', error);
+    res.status(500).json({ success: false, message: 'Failed to create shipment' });
+  }
+});
+
+app.put('/api/material-shipments/:id', requireAuth, async (req, res) => {
+  try {
+    const updatedShipment = await updateMaterialShipment(req.params.id, req.body);
+    if (updatedShipment) {
+      res.json({ success: true, message: 'Shipment updated successfully', data: updatedShipment });
+    } else {
+      res.status(404).json({ success: false, message: 'Shipment not found' });
+    }
+  } catch (error) {
+    console.error('Error updating material shipment:', error);
+    res.status(500).json({ success: false, message: 'Failed to update shipment' });
+  }
+});
+
+app.delete('/api/material-shipments/:id', requireAuth, async (req, res) => {
+  try {
+    const deleted = await deleteMaterialShipment(req.params.id);
+    if (deleted) {
+      res.json({ success: true, message: 'Shipment deleted successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Shipment not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting material shipment:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete shipment' });
+  }
+});
 
 startServer();
 
