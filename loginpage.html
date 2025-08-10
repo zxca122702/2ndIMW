@@ -5,6 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fox Control Hub - Login</title>
     <style>
+        :root {
+            --primary-color: #CC79F0;
+            --secondary-color: #3E7EF7;
+            --border-color: #F3F3F3;
+            --success-color: #00B146;
+            --danger-color: #CF2C3A;
+            --warning-color: #FFA300;
+            --main-bg: #FDFFFA;
+            --bg-shadow: #F3F3F3;
+            --table-row1: #F7F5FC;
+            --table-row2: #F1EDF9;
+            --table-bg: #F8F8F8;
+            --bar-graph: #6E62BF;
+            --confirmed: #1979FE;
+            --header-color: #333135;
+            --sub-header: #5F5B62;
+            --tertiary-header: #2E2E38;
+            --body-font: #4A4A4A;
+            --pie-color1: #8979FF;
+            --pie-color2: #FF928A;
+            --pie-color3: #3CC3DF;
+            --pie-color4: #FFAE4C;
+            --pie-color5: #537FF1;
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -14,7 +39,7 @@
         body {
             font-family: 'Arial', sans-serif;
             height: 100vh;
-            background: linear-gradient(135deg, #ff8c00 0%, #ffa500 50%, #ffb84d 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%, var(--pie-color4) 100%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -53,7 +78,7 @@
         .fox-logo {
             width: 120px;
             height: 120px;
-            background: linear-gradient(135deg, #ff6b35, #ff8c00);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             border-radius: 20px;
             display: flex;
             align-items: center;
@@ -64,20 +89,20 @@
 
         .fox-icon {
             font-size: 60px;
-            color: #333;
+            color: var(--header-color);
         }
 
         .welcome-text {
             font-size: 48px;
             font-weight: bold;
-            color: #333;
+            color: var(--header-color);
             line-height: 1.2;
             margin-bottom: 10px;
         }
 
         .subtitle {
             font-size: 24px;
-            color: #555;
+            color: var(--sub-header);
             font-weight: 300;
         }
 
@@ -99,23 +124,23 @@
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background: #ffa500;
+            background: var(--warning-color);
             animation: pulse 2s infinite;
         }
 
         .db-dot.connected {
-            background: #27ae60;
+            background: var(--success-color);
             animation: none;
         }
 
         .db-dot.error {
-            background: #e74c3c;
+            background: var(--danger-color);
             animation: none;
         }
 
         .db-text {
             font-size: 14px;
-            color: #333;
+            color: var(--header-color);
             font-weight: 500;
         }
 
@@ -142,21 +167,21 @@
         .user-icon {
             width: 80px;
             height: 80px;
-            background: #ddd;
+            background: var(--bg-shadow);
             border-radius: 50%;
             margin: 0 auto 30px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 40px;
-            color: #666;
+            color: var(--body-font);
         }
 
         .login-title {
             text-align: center;
             font-size: 32px;
             font-weight: bold;
-            color: #333;
+            color: var(--header-color);
             margin-bottom: 40px;
         }
 
@@ -176,14 +201,14 @@
         }
 
         .form-input:focus {
-            border-color: #ff8c00;
-            box-shadow: 0 0 10px rgba(255, 140, 0, 0.2);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(204, 121, 240, 0.2);
         }
 
         .login-btn {
             width: 100%;
             padding: 15px;
-            background: linear-gradient(135deg, #ff8c00, #ffa500);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
             border: none;
             border-radius: 25px;
@@ -191,12 +216,12 @@
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(255, 140, 0, 0.3);
+            box-shadow: 0 5px 15px rgba(204, 121, 240, 0.3);
         }
 
         .login-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(255, 140, 0, 0.4);
+            box-shadow: 0 8px 20px rgba(204, 121, 240, 0.4);
         }
 
         .login-btn:active {
@@ -204,7 +229,7 @@
         }
 
         .error-message {
-            color: #e74c3c;
+            color: var(--danger-color);
             text-align: center;
             margin-top: 15px;
             font-size: 14px;
@@ -212,7 +237,7 @@
         }
 
         .success-message {
-            color: #27ae60;
+            color: var(--success-color);
             text-align: center;
             margin-top: 15px;
             font-size: 14px;
