@@ -1,11 +1,27 @@
 const { neon } = require('@neondatabase/serverless');
 require('dotenv').config();
 
-// Create Neon serverless connection
-const sql = neon(process.env.DATABASE_URL);
+// Create Neon serverless connection (with fallback)
+let sql;
+try {
+  if (process.env.DATABASE_URL) {
+    sql = neon(process.env.DATABASE_URL);
+  } else {
+    console.log('⚠️ No DATABASE_URL found, running in mock mode');
+    sql = null;
+  }
+} catch (error) {
+  console.log('⚠️ Database connection failed, running in mock mode');
+  sql = null;
+}
 
 // Test database connection
 const testConnection = async () => {
+  if (!sql) {
+    console.log('⚠️ Database not available, skipping table creation');
+    return;
+  }
+  
   try {
     const result = await sql`SELECT version()`;
     console.log('✅ Connected to Neon database successfully');
@@ -215,6 +231,11 @@ const getUnreadNotificationCount = async () => {
 
 // Scan history functions
 const saveScanHistory = async (scanData) => {
+  if (!sql) {
+    console.log('⚠️ Database not available, scan history saved locally only');
+    return { id: Date.now(), created_at: new Date() };
+  }
+  
   try {
     const result = await sql`
       INSERT INTO scan_history (
@@ -234,6 +255,11 @@ const saveScanHistory = async (scanData) => {
 };
 
 const getScanHistory = async (limit = 100) => {
+  if (!sql) {
+    console.log('⚠️ Database not available, returning empty scan history');
+    return [];
+  }
+  
   try {
     const result = await sql`
       SELECT * FROM scan_history 
@@ -248,6 +274,11 @@ const getScanHistory = async (limit = 100) => {
 };
 
 const clearScanHistory = async () => {
+  if (!sql) {
+    console.log('⚠️ Database not available, scan history cleared locally only');
+    return true;
+  }
+  
   try {
     await sql`DELETE FROM scan_history`;
     return true;

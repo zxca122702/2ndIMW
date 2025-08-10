@@ -924,6 +924,7 @@ let continuousMode = false;
 let scanTimeout = 30;
 let autoLookup = true;
 let playBeepSound = true;
+let currentUser = null;
 
 // API Helper Functions
 const API_BASE = '/api';
@@ -1184,6 +1185,8 @@ async function processScan(code, type) {
   
   // Save to database
   try {
+    console.log('Attempting to save scan to database:', { currentUser, scanData });
+    
     const dbScanData = {
       code: code,
       type: type,
@@ -1195,15 +1198,22 @@ async function processScan(code, type) {
       notes: `Scanned at ${timestamp.toLocaleString()}`
     };
     
+    console.log('Sending scan data to database:', dbScanData);
+    
     // Try to save to database
     const savedScan = await apiCall('/scan-history', {
       method: 'POST',
       body: JSON.stringify(dbScanData)
     });
     
+    console.log('Database save response:', savedScan);
+    
     if (savedScan.success) {
       scanData.dbId = savedScan.data.id;
       scanData.dbCreatedAt = savedScan.data.created_at;
+      console.log('Scan saved to database successfully');
+    } else {
+      console.log('Database save failed:', savedScan);
     }
   } catch (error) {
     console.error('Error saving scan to database:', error);
@@ -1672,10 +1682,15 @@ async function clearScanHistory() {
 
 async function loadScanHistoryFromDatabase() {
   try {
+    console.log('Loading scan history from database...');
     showLoading(true);
     const response = await apiCall('/scan-history');
     
+    console.log('Database response:', response);
+    
     if (response.success && response.data) {
+      console.log('Received scan history from database:', response.data);
+      
       // Convert database format to local format
       const dbHistory = response.data.map(dbScan => ({
         id: dbScan.id,
@@ -1698,11 +1713,16 @@ async function loadScanHistoryFromDatabase() {
       
       if (newDbScans.length > 0) {
         scanHistory = [...newDbScans, ...scanHistory];
+        console.log(`Added ${newDbScans.length} new scans from database`);
         showMessage(`Loaded ${newDbScans.length} scans from database`, 'success');
+      } else {
+        console.log('No new scans found in database');
       }
       
       updateScanHistory();
       updateScanCount();
+    } else {
+      console.log('No scan history data received from database');
     }
   } catch (error) {
     console.error('Error loading scan history from database:', error);
@@ -1761,11 +1781,13 @@ async function fetchUser() {
   try {
     const response = await apiCall('/user');
     if (response.success && response.data) {
+      currentUser = response.data;
       displayUser(response.data);
     }
   } catch (error) {
     console.error('Failed to fetch user:', error);
     // Use default user data
+    currentUser = { username: 'scanner' };
     displayUser({ username: 'scanner' });
   }
 }
