@@ -4,6 +4,11 @@ const database = require('./database');
 const initializeInventoryTable = async () => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, skipping inventory table creation');
+      return;
+    }
+    
     await sql`
       CREATE TABLE IF NOT EXISTS inventory_items (
         id SERIAL PRIMARY KEY,
@@ -60,6 +65,11 @@ const initializeInventoryTable = async () => {
   try {
     // Insert default Categories
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, skipping default data insertion');
+      return;
+    }
+    
     await sql`
       INSERT INTO categories (category_id, category_name) VALUES
         ('CAT001', 'Electronics'),
@@ -87,10 +97,16 @@ const initializeInventoryTable = async () => {
 const initializeMaterialShipmentsTable = async () => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, skipping material shipments table creation');
+      return;
+    }
+    
     await sql`
       CREATE TABLE IF NOT EXISTS material_shipments (
         id SERIAL PRIMARY KEY,
         shipment_id VARCHAR(50) UNIQUE NOT NULL,
+        material_id VARCHAR(50),
         material_name VARCHAR(255) NOT NULL,
         item_code VARCHAR(50),
         quantity INTEGER NOT NULL,
@@ -120,6 +136,11 @@ const initializeMaterialShipmentsTable = async () => {
 const getAllInventoryItems = async (filters = {}) => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, returning empty inventory items');
+      return [];
+    }
+    
     let query = sql`
       SELECT 
         i.*,
@@ -191,6 +212,11 @@ const getAllInventoryItems = async (filters = {}) => {
 const getInventoryItemById = async (id) => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, returning null for inventory item');
+      return null;
+    }
+    
     const result = await sql`
       SELECT 
         i.*,
@@ -213,6 +239,10 @@ const getInventoryItemById = async (id) => {
 const createInventoryItem = async (itemData) => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, cannot create inventory item');
+      throw new Error('Database connection not available');
+    }
     const {
       item_code,
       product_name,
@@ -248,6 +278,10 @@ const createInventoryItem = async (itemData) => {
 const updateInventoryItem = async (id, itemData) => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, cannot update inventory item');
+      throw new Error('Database connection not available');
+    }
     const {
       item_code,
       product_name,
@@ -289,6 +323,10 @@ const updateInventoryItem = async (id, itemData) => {
 const deleteInventoryItem = async (id) => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, cannot delete inventory item');
+      throw new Error('Database connection not available');
+    }
     const result = await sql`
       DELETE FROM inventory_items
       WHERE id = ${id}
@@ -306,6 +344,10 @@ const deleteInventoryItem = async (id) => {
 const deleteMultipleInventoryItems = async (ids) => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, cannot delete multiple inventory items');
+      throw new Error('Database connection not available');
+    }
     const result = await sql`
       DELETE FROM inventory_items
       WHERE id = ANY(${ids})
@@ -323,6 +365,10 @@ const deleteMultipleInventoryItems = async (ids) => {
 const getAllCategories = async () => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, returning empty categories list');
+      return [];
+    }
     const result = await sql`
       SELECT * FROM categories
       ORDER BY category_name
@@ -339,6 +385,10 @@ const getAllCategories = async () => {
 const getAllWarehouses = async () => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, returning empty warehouses list');
+      return [];
+    }
     const result = await sql`
       SELECT * FROM warehouses
       ORDER BY warehouse_name
@@ -355,6 +405,15 @@ const getAllWarehouses = async () => {
 const getInventoryStats = async () => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, returning empty inventory stats');
+      return {
+        totalItems: 0,
+        activeItems: 0,
+        lowStockItems: 0,
+        totalValue: 0
+      };
+    }
     const totalItems = await sql`SELECT COUNT(*) as count FROM inventory_items`;
     const activeItems = await sql`SELECT COUNT(*) as count FROM inventory_items WHERE status = 'active'`;
     const lowStockItems = await sql`SELECT COUNT(*) as count FROM inventory_items WHERE total_quantity < 10`;
@@ -376,6 +435,10 @@ const getInventoryStats = async () => {
 const updateItemQuantity = async (id, newQuantity, operation = 'set') => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, cannot update item quantity');
+      throw new Error('Database connection not available');
+    }
     let query;
     
     if (operation === 'add') {
@@ -413,6 +476,10 @@ const updateItemQuantity = async (id, newQuantity, operation = 'set') => {
 const getAllMaterialShipments = async (filters = {}) => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, returning empty shipments list');
+      return [];
+    }
     let query = sql`
       SELECT * FROM material_shipments
     `;
@@ -466,6 +533,10 @@ const getAllMaterialShipments = async (filters = {}) => {
 const getMaterialShipmentById = async (id) => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, returning null for material shipment');
+      return null;
+    }
     const result = await sql`
       SELECT * FROM material_shipments
       WHERE id = ${id}
@@ -482,6 +553,10 @@ const getMaterialShipmentById = async (id) => {
 const createMaterialShipment = async (shipmentData) => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, cannot create material shipment');
+      throw new Error('Database connection not available');
+    }
     const {
       shipment_id,
       material_name,
@@ -523,6 +598,10 @@ const createMaterialShipment = async (shipmentData) => {
 const updateMaterialShipment = async (id, shipmentData) => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, cannot update material shipment');
+      throw new Error('Database connection not available');
+    }
     const {
       shipment_id,
       material_name,
@@ -572,6 +651,10 @@ const updateMaterialShipment = async (id, shipmentData) => {
 const deleteMaterialShipment = async (id) => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, cannot delete material shipment');
+      throw new Error('Database connection not available');
+    }
     const result = await sql`
       DELETE FROM material_shipments
       WHERE id = ${id}
@@ -589,6 +672,17 @@ const deleteMaterialShipment = async (id) => {
 const getMaterialShipmentStats = async () => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, returning empty shipment stats');
+      return {
+        totalShipments: 0,
+        deliveredShipments: 0,
+        pendingShipments: 0,
+        shippedShipments: 0,
+        inboundShipments: 0,
+        outboundShipments: 0
+      };
+    }
     const totalShipments = await sql`SELECT COUNT(*) as count FROM material_shipments`;
     const deliveredShipments = await sql`SELECT COUNT(*) as count FROM material_shipments WHERE status = 'delivered'`;
     const pendingShipments = await sql`SELECT COUNT(*) as count FROM material_shipments WHERE status = 'pending'`;
@@ -614,6 +708,10 @@ const getMaterialShipmentStats = async () => {
 const updateShipmentStatus = async (id, status, receivedDate = null) => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, cannot update shipment status');
+      throw new Error('Database connection not available');
+    }
     let query;
     
     if (receivedDate) {
@@ -644,6 +742,10 @@ const updateShipmentStatus = async (id, status, receivedDate = null) => {
 const getShipmentsByItemCode = async (itemCode) => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, returning empty shipments list');
+      return [];
+    }
     const result = await sql`
       SELECT * FROM material_shipments
       WHERE item_code = ${itemCode}
@@ -654,6 +756,111 @@ const getShipmentsByItemCode = async (itemCode) => {
   } catch (err) {
     console.error('Error fetching shipments by item code:', err);
     throw err;
+  }
+};
+
+// Get inventory impact summary based on material shipments
+const getInventoryImpactSummary = async () => {
+  try {
+    const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, returning empty inventory impact summary');
+      return {
+        pendingInbound: 0,
+        pendingOutbound: 0,
+        netImpact: 0,
+        stockStatus: []
+      };
+    }
+    
+    // Get shipments that affect inventory (inbound/outbound)
+    const shipmentsResult = await sql`
+      SELECT 
+        ms.item_code,
+        ms.quantity,
+        ms.unit,
+        ms.shipment_type,
+        ms.status,
+        ms.date_shipped,
+        ms.received_date,
+        i.product_name as material_name,
+        i.total_quantity as current_stock,
+        i.min_stock_level
+      FROM material_shipments ms
+      LEFT JOIN inventory_items i ON ms.item_code = i.item_code
+      WHERE ms.shipment_type IN ('inbound', 'outbound')
+      ORDER BY ms.date_shipped DESC
+    `;
+    
+    // Calculate impact for each item
+    const impactSummary = {};
+    
+    shipmentsResult.forEach(shipment => {
+      const itemCode = shipment.item_code;
+      
+      if (!impactSummary[itemCode]) {
+        impactSummary[itemCode] = {
+          item_code: itemCode,
+          material_name: shipment.material_name || 'Unknown',
+          current_stock: shipment.current_stock || 0,
+          min_stock_level: shipment.min_stock_level || 0,
+          inbound_quantity: 0,
+          outbound_quantity: 0,
+          pending_inbound: 0,
+          pending_outbound: 0,
+          stock_status: 'normal',
+          last_updated: null
+        };
+      }
+      
+      const impact = impactSummary[itemCode];
+      
+      if (shipment.shipment_type === 'inbound') {
+        if (shipment.status === 'delivered') {
+          impact.inbound_quantity += parseFloat(shipment.quantity);
+          impact.last_updated = shipment.received_date;
+        } else if (shipment.status === 'shipped') {
+          impact.pending_inbound += parseFloat(shipment.quantity);
+        }
+      } else if (shipment.shipment_type === 'outbound') {
+        if (shipment.status === 'delivered') {
+          impact.outbound_quantity += parseFloat(shipment.quantity);
+          impact.last_updated = shipment.date_shipped;
+        } else if (shipment.status === 'shipped') {
+          impact.pending_outbound += parseFloat(shipment.quantity);
+        }
+      }
+    });
+    
+    // Calculate stock status and projected stock
+    Object.values(impactSummary).forEach(item => {
+      const projectedStock = item.current_stock + item.inbound_quantity - item.outbound_quantity;
+      
+      if (projectedStock <= item.min_stock_level) {
+        item.stock_status = 'low';
+      } else if (projectedStock <= item.min_stock_level * 1.5) {
+        item.stock_status = 'warning';
+      } else {
+        item.stock_status = 'normal';
+      }
+      
+      item.projected_stock = projectedStock;
+    });
+    
+    return {
+      items: Object.values(impactSummary),
+      summary: {
+        total_items: Object.keys(impactSummary).length,
+        low_stock_items: Object.values(impactSummary).filter(item => item.stock_status === 'low').length,
+        warning_items: Object.values(impactSummary).filter(item => item.stock_status === 'warning').length,
+        total_pending_inbound: Object.values(impactSummary).reduce((sum, item) => sum + item.pending_inbound, 0),
+        total_pending_outbound: Object.values(impactSummary).reduce((sum, item) => sum + item.pending_outbound, 0)
+      }
+    };
+    
+  } catch (error) {
+    console.error('Error getting inventory impact summary:', error);
+    throw error;
   }
 };
 
@@ -677,5 +884,6 @@ module.exports = {
   deleteMaterialShipment,
   getMaterialShipmentStats,
   updateShipmentStatus,
-  getShipmentsByItemCode
+  getShipmentsByItemCode,
+  getInventoryImpactSummary
 };

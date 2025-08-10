@@ -1,6 +1,10 @@
 const { neon } = require('@neondatabase/serverless');
 require('dotenv').config();
 
+console.log('🔍 Environment check:');
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Found' : 'Not found');
+console.log('NODE_ENV:', process.env.NODE_ENV || 'not set');
+
 let sql = null;
 let connectionPromise = null;
 
@@ -16,7 +20,6 @@ async function initializeConnection() {
           try {
             await connection`SELECT 1`;
             sql = connection;
-            module.exports.sql = async () => connection;
             console.log('✅ Database connection initialized successfully');
             return connection;
           } catch (testError) {
@@ -63,7 +66,7 @@ const testConnection = async () => {
     console.log(`Database version: ${result[0].version}`);
     
     // Create users table if it doesn't exist
-    await sql`
+    await connection`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
@@ -74,7 +77,7 @@ const testConnection = async () => {
     `;
     
     // Create notifications table if it doesn't exist
-    await sql`
+    await connection`
       CREATE TABLE IF NOT EXISTS notifications (
         id SERIAL PRIMARY KEY,
         title VARCHAR(100) NOT NULL,
@@ -86,7 +89,7 @@ const testConnection = async () => {
     `;
     
     // Create scan history table if it doesn't exist
-    await sql`
+    await connection`
       CREATE TABLE IF NOT EXISTS scan_history (
         id SERIAL PRIMARY KEY,
         scanned_code VARCHAR(100) NOT NULL,
@@ -101,46 +104,74 @@ const testConnection = async () => {
       )
     `;
     
-    console.log('✅ Users, notifications, and scan history tables created/verified');
-  } catch (err) {
-    console.error('❌ Database connection error:', err);
+    console.log('✅ Database tables initialized successfully');
+  } catch (error) {
+    console.error('❌ Database table creation error:', error);
+    throw error;
   }
 };
 
-// Initialize database
+// Initialize database with admin user
 const initializeDatabase = async () => {
   try {
     await testConnection();
-    
+
+    // Get the SQL connection
+    const sql = await getSql();
+    if (!sql) {
+      console.log('⚠️ No database connection available, skipping initialization');
+      return;
+    }
+
     // Check if admin user exists, if not create it
     const adminCheck = await sql`SELECT * FROM users WHERE username = 'admin'`;
-    
     if (adminCheck.length === 0) {
-      const bcrypt = require('bcryptjs');
+      // Create admin user with hashed password (admin/admin)
+      const bcrypt = require('bcrypt');
       const hashedPassword = await bcrypt.hash('admin', 10);
-      
       await sql`
         INSERT INTO users (username, password, role) 
         VALUES ('admin', ${hashedPassword}, 'admin')
       `;
-      
-      console.log('✅ Default admin user created (username: admin, password: admin)');
+      console.log('✅ Admin user created successfully');
     } else {
       console.log('✅ Admin user already exists');
     }
-    
-    // Initialize inventory tables
-    const { initializeInventoryTable } = require('./inventory');
-    await initializeInventoryTable();
-    
-  } catch (err) {
-    console.error('❌ Database initialization error:', err);
+
+    // Create some sample notifications
+    const notificationCheck = await sql`SELECT * FROM notifications LIMIT 1`;
+    if (notificationCheck.length === 0) {
+      await sql`
+        INSERT INTO notifications (title, message, type) VALUES 
+        ('Welcome to Inventory System', 'Your inventory management system is ready to use!', 'info'),
+        ('Database Connected', 'Successfully connected to the database.', 'success')
+      `;
+      console.log('✅ Sample notifications created');
+    }
+
+    console.log('✅ Database initialization completed successfully');
+  } catch (error) {
+    console.error('❌ Database initialization error:', error);
+    throw error;
   }
 };
 
 // User authentication functions
 const authenticateUser = async (username, password) => {
   try {
+    const sql = await getSql();
+    if (!sql) {
+      // Mock authentication for testing when database is not available
+      if (username === 'admin' && password === 'admin') {
+        return {
+          id: 1,
+          username: 'admin',
+          role: 'admin'
+        };
+      }
+      return null;
+    }
+    
     const result = await sql`SELECT * FROM users WHERE username = ${username}`;
     
     if (result.length === 0) {
@@ -181,6 +212,25 @@ let nextNotificationId = 1;
 // Notification functions
 const createNotification = async (title, message, type = 'info') => {
   try {
+    const sql = await getSql();
+    if (!sql) {
+      // Fallback to in-memory storage
+      const notification = {
+        id: nextNotificationId++,
+        title,
+        message,
+        type,
+        created_at: new Date().toISOString(),
+        is_read: false
+      };
+      inMemoryNotifications.unshift(notification);
+      // Keep only the latest 20 notifications
+      if (inMemoryNotifications.length > 20) {
+        inMemoryNotifications = inMemoryNotifications.slice(0, 20);
+      }
+      return notification;
+    }
+    
     const result = await sql`
       INSERT INTO notifications (title, message, type, created_at, is_read) 
       VALUES (${title}, ${message}, ${type}, CURRENT_TIMESTAMP, false)
@@ -209,6 +259,12 @@ const createNotification = async (title, message, type = 'info') => {
 
 const getNotifications = async (limit = 10) => {
   try {
+    const sql = await getSql();
+    if (!sql) {
+      // Fallback to in-memory storage
+      return inMemoryNotifications.slice(0, limit);
+    }
+    
     const result = await sql`
       SELECT id, title, message, type, created_at, is_read 
       FROM notifications 
@@ -225,6 +281,17 @@ const getNotifications = async (limit = 10) => {
 
 const markNotificationAsRead = async (id) => {
   try {
+    const sql = await getSql();
+    if (!sql) {
+      // Fallback to in-memory storage
+      const notification = inMemoryNotifications.find(n => n.id == id);
+      if (notification) {
+        notification.is_read = true;
+        return true;
+      }
+      return false;
+    }
+    
     await sql`UPDATE notifications SET is_read = true WHERE id = ${id}`;
     return true;
   } catch (err) {
@@ -241,6 +308,15 @@ const markNotificationAsRead = async (id) => {
 
 const markAllNotificationsAsRead = async () => {
   try {
+    const sql = await getSql();
+    if (!sql) {
+      // Fallback to in-memory storage
+      inMemoryNotifications.forEach(notification => {
+        notification.is_read = true;
+      });
+      return true;
+    }
+    
     await sql`UPDATE notifications SET is_read = true WHERE is_read = false`;
     return true;
   } catch (err) {
@@ -255,6 +331,12 @@ const markAllNotificationsAsRead = async () => {
 
 const getUnreadNotificationCount = async () => {
   try {
+    const sql = await getSql();
+    if (!sql) {
+      // Fallback to in-memory storage
+      return inMemoryNotifications.filter(n => !n.is_read).length;
+    }
+    
     const result = await sql`SELECT COUNT(*) as count FROM notifications WHERE is_read = false`;
     return result[0].count;
   } catch (err) {
@@ -303,12 +385,13 @@ const saveScanHistory = async (scanData) => {
 };
 
 const getScanHistory = async (limit = 100) => {
-  if (!sql) {
-    console.log('⚠️ Database not available, returning empty scan history');
-    return [];
-  }
-  
   try {
+    const sql = await getSql();
+    if (!sql) {
+      console.log('⚠️ Database not available, returning empty scan history');
+      return [];
+    }
+    
     const result = await sql`
       SELECT * FROM scan_history 
       ORDER BY created_at DESC 
@@ -322,12 +405,13 @@ const getScanHistory = async (limit = 100) => {
 };
 
 const clearScanHistory = async () => {
-  if (!sql) {
-    console.log('⚠️ Database not available, scan history cleared locally only');
-    return true;
-  }
-  
   try {
+    const sql = await getSql();
+    if (!sql) {
+      console.log('⚠️ Database not available, scan history cleared locally only');
+      return true;
+    }
+    
     await sql`DELETE FROM scan_history`;
     return true;
   } catch (err) {
@@ -337,12 +421,13 @@ const clearScanHistory = async () => {
 };
 
 const deleteScanHistory = async (scanId) => {
-  if (!sql) {
-    console.log('⚠️ Database not available, scan history deleted locally only');
-    return true;
-  }
-
   try {
+    const sql = await getSql();
+    if (!sql) {
+      console.log('⚠️ Database not available, scan history deleted locally only');
+      return true;
+    }
+
     await sql`DELETE FROM scan_history WHERE id = ${scanId}`;
     // PostgreSQL DELETE doesn't return affected rows by default
     const check = await sql`SELECT EXISTS(SELECT 1 FROM scan_history WHERE id = ${scanId})`;
@@ -358,6 +443,10 @@ module.exports = {
   sql: async () => {
     if (!sql) {
       await initializeConnection();
+    }
+    if (!sql) {
+      console.log('⚠️ No database connection available');
+      return null;
     }
     return sql;
   },

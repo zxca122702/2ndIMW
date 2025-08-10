@@ -603,6 +603,7 @@
                 <tr>
                   <th>Shipment ID</th>
                   <th>Material/Stock Name</th>
+                  <th>Material ID</th>
                   <th>Quantity</th>
                   <th>Unit</th>
                   <th>Type</th>
@@ -625,6 +626,7 @@
                       <small class="text-muted ms-2">(Raw Material)</small>
                     </div>
                   </td>
+                  <td>MAT001</td>
                   <td>100</td>
                   <td>kg</td>
                   <td><span class="badge bg-primary">Inbound</span></td>
@@ -650,6 +652,7 @@
                       <small class="text-muted ms-2">(ITM002)</small>
                     </div>
                   </td>
+                  <td>MAT002</td>
                   <td>50</td>
                   <td>pcs</td>
                   <td><span class="badge bg-success">Inbound</span></td>
@@ -675,6 +678,7 @@
                       <small class="text-muted ms-2">(ITM001)</small>
                     </div>
                   </td>
+                  <td>MAT003</td>
                   <td>25</td>
                   <td>pcs</td>
                   <td><span class="badge bg-warning text-dark">Outbound</span></td>
@@ -833,6 +837,12 @@
             </div>
           </div>
           <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="materialId" class="form-label">Material ID</label>
+                <input type="text" class="form-control" id="materialId" name="materialId" placeholder="Enter material ID">
+              </div>
+            </div>
             <div class="col-md-6">
               <div class="mb-3">
                 <label for="itemCode" class="form-label">Item Code</label>
@@ -1211,7 +1221,7 @@ function renderShipmentsTable(data = []) {
   if (data.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="13" class="text-center text-muted py-4">
+        <td colspan="14" class="text-center text-muted py-4">
           <i class="bi bi-inbox fs-1 d-block mb-2"></i>
           No shipments found
         </td>
@@ -1230,6 +1240,7 @@ function renderShipmentsTable(data = []) {
           ${shipment.item_code ? `<small class="text-muted ms-2">(${shipment.item_code})</small>` : ''}
         </div>
       </td>
+      <td>${shipment.material_id || '-'}</td>
       <td>${shipment.quantity}</td>
       <td>${shipment.unit}</td>
       <td><span class="badge bg-${shipment.shipment_type === 'inbound' ? 'primary' : 'success'}">${shipment.shipment_type}</span></td>
@@ -1266,6 +1277,7 @@ function searchShipments(searchTerm) {
   const filtered = shipmentsData.filter(shipment => 
     shipment.shipment_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     shipment.material_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (shipment.material_id && shipment.material_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
     shipment.source.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
@@ -1297,6 +1309,7 @@ function applyFilters() {
     filtered = filtered.filter(s => 
       s.shipment_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.material_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (s.material_id && s.material_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
       s.source.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }
@@ -1364,6 +1377,7 @@ async function editShipment(id) {
       document.getElementById('shipmentModalLabel').textContent = 'Edit Shipment';
       document.getElementById('shipmentId').value = shipment.id;
       document.getElementById('shipmentIdInput').value = shipment.shipment_id;
+      document.getElementById('materialId').value = shipment.material_id || '';
       document.getElementById('materialName').value = shipment.material_name;
       document.getElementById('itemCode').value = shipment.item_code || '';
       document.getElementById('quantity').value = shipment.quantity;
@@ -1401,6 +1415,7 @@ async function saveShipment() {
     const formData = new FormData(form);
     const shipmentData = {
       shipment_id: formData.get('shipmentIdInput'),
+      material_id: formData.get('materialId') || null,
       material_name: formData.get('materialName'),
       item_code: formData.get('itemCode') || null,
       quantity: parseInt(formData.get('quantity')),
@@ -1468,6 +1483,7 @@ async function viewShipment(id) {
         <div class="row">
           <div class="col-md-6">
             <p><strong>Shipment ID:</strong> ${shipment.shipment_id}</p>
+            <p><strong>Material ID:</strong> ${shipment.material_id || 'N/A'}</p>
             <p><strong>Material Name:</strong> ${shipment.material_name}</p>
             <p><strong>Item Code:</strong> ${shipment.item_code || 'N/A'}</p>
             <p><strong>Quantity:</strong> ${shipment.quantity} ${shipment.unit}</p>
@@ -1552,10 +1568,11 @@ function exportShipments() {
 
 // Generate CSV content
 function generateCSV(data) {
-  const headers = ['Shipment ID', 'Material Name', 'Item Code', 'Quantity', 'Unit', 'Type', 'Status', 'Source', 'Destination', 'Date Shipped', 'Estimated Delivery', 'Received Date', 'Handled By'];
+  const headers = ['Shipment ID', 'Material Name', 'Material ID', 'Item Code', 'Quantity', 'Unit', 'Type', 'Status', 'Source', 'Destination', 'Date Shipped', 'Estimated Delivery', 'Received Date', 'Handled By'];
   const rows = data.map(item => [
     item.shipment_id,
     item.material_name,
+    item.material_id || '',
     item.item_code || '',
     item.quantity,
     item.unit,
@@ -1596,7 +1613,65 @@ async function refreshInventoryImpact() {
 // Load inventory impact data
 async function loadInventoryImpactData() {
   try {
-    // Get shipments data for impact calculation
+    // Get inventory impact summary from the new API
+    const response = await fetch('/api/material-shipments/impact');
+    const impactData = await response.json();
+    
+    if (impactData && impactData.summary) {
+      const summary = impactData.summary;
+      const items = impactData.items || [];
+      
+      // Calculate totals from items
+      const totalInbound = items.reduce((sum, item) => sum + item.pending_inbound, 0);
+      const totalOutbound = items.reduce((sum, item) => sum + item.pending_outbound, 0);
+      const netImpact = totalInbound - totalOutbound;
+      
+      // Update UI with summary data
+      document.getElementById('inboundUnits').textContent = `+${totalInbound} units`;
+      document.getElementById('outboundUnits').textContent = `-${totalOutbound} units`;
+      
+      if (netImpact >= 0) {
+        document.getElementById('netImpact').textContent = `+${netImpact} units`;
+        document.getElementById('netImpact').className = 'fw-bold text-success';
+        document.getElementById('netImpactDetails').textContent = 'Positive inventory growth';
+      } else {
+        document.getElementById('netImpact').textContent = `${netImpact} units`;
+        document.getElementById('netImpact').className = 'fw-bold text-danger';
+        document.getElementById('netImpactDetails').textContent = 'Negative inventory impact';
+      }
+      
+      // Update details with item information
+      const inboundItems = items.filter(item => item.pending_inbound > 0).slice(0, 3);
+      const inboundDetails = inboundItems.length > 0 
+        ? inboundItems.map(item => `${item.material_name} (+${item.pending_inbound})`).join(', ')
+        : 'No pending inbound shipments';
+      document.getElementById('inboundDetails').textContent = inboundDetails;
+      
+      const outboundItems = items.filter(item => item.pending_outbound > 0).slice(0, 3);
+      const outboundDetails = outboundItems.length > 0
+        ? outboundItems.map(item => `${item.material_name} (-${item.pending_outbound})`).join(', ')
+        : 'No pending outbound shipments';
+      document.getElementById('outboundDetails').textContent = outboundDetails;
+      
+      // Show stock status indicators
+      if (summary.low_stock_items > 0) {
+        document.getElementById('inboundDetails').innerHTML += ` <span class="badge bg-danger ms-1">${summary.low_stock_items} low stock</span>`;
+      }
+      if (summary.warning_items > 0) {
+        document.getElementById('outboundDetails').innerHTML += ` <span class="badge bg-warning ms-1">${summary.warning_items} warning</span>`;
+      }
+    }
+  } catch (error) {
+    console.error('Error loading inventory impact data:', error);
+    // Fallback to basic calculation if API fails
+    await loadBasicInventoryImpact();
+    throw error;
+  }
+}
+
+// Fallback function for basic inventory impact calculation
+async function loadBasicInventoryImpact() {
+  try {
     const response = await fetch('/api/material-shipments');
     const result = await response.json();
     
@@ -1620,11 +1695,11 @@ async function loadInventoryImpactData() {
       
       if (netImpact >= 0) {
         document.getElementById('netImpact').textContent = `+${netImpact} units`;
-        document.getElementById('netImpact').className = 'text-success';
+        document.getElementById('netImpact').className = 'fw-bold text-success';
         document.getElementById('netImpactDetails').textContent = 'Positive inventory growth';
       } else {
         document.getElementById('netImpact').textContent = `${netImpact} units`;
-        document.getElementById('netImpact').className = 'text-danger';
+        document.getElementById('netImpactDetails').className = 'fw-bold text-danger';
         document.getElementById('netImpactDetails').textContent = 'Negative inventory impact';
       }
       
@@ -1640,8 +1715,7 @@ async function loadInventoryImpactData() {
       document.getElementById('outboundDetails').textContent = outboundDetails;
     }
   } catch (error) {
-    console.error('Error loading inventory impact data:', error);
-    throw error;
+    console.error('Error in fallback inventory impact calculation:', error);
   }
 }
 

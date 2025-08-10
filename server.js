@@ -35,7 +35,8 @@ const {
   deleteMaterialShipment,
   getMaterialShipmentStats,
   updateShipmentStatus,
-  getShipmentsByItemCode
+  getShipmentsByItemCode,
+  getInventoryImpactSummary
 } = require('./inventory');
 require('dotenv').config();
 
@@ -606,6 +607,17 @@ app.get('/api/material-shipments', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Error fetching material shipments:', err);
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Get inventory impact summary
+app.get('/api/material-shipments/impact', requireAuth, async (req, res) => {
+  try {
+    const impactSummary = await getInventoryImpactSummary();
+    res.json(impactSummary);
+  } catch (error) {
+    console.error('Error getting inventory impact summary:', error);
+    res.status(500).json({ error: 'Failed to get inventory impact summary' });
   }
 });
 
