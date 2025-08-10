@@ -1,13 +1,64 @@
 const { neon } = require('@neondatabase/serverless');
 require('dotenv').config();
 
-// Create Neon serverless connection
-const sql = neon(process.env.DATABASE_URL);
+let sql = null;
+let connectionPromise = null;
 
-// Test database connection
+// Initialize database connection
+async function initializeConnection() {
+  if (!connectionPromise) {
+    connectionPromise = (async () => {
+      if (process.env.DATABASE_URL) {
+        try {
+          console.log('Attempting to connect to database...');
+          const connection = neon(process.env.DATABASE_URL);
+          // Test connection with more detailed error handling
+          try {
+            await connection`SELECT 1`;
+            sql = connection;
+            module.exports.sql = async () => connection;
+            console.log('✅ Database connection initialized successfully');
+            return connection;
+          } catch (testError) {
+            console.error('Connection test failed:', testError.message);
+            throw testError;
+          }
+        } catch (error) {
+          console.error('⚠️ Database connection failed:');
+          console.error('Error type:', error.name);
+          console.error('Error message:', error.message);
+          if (error.code) console.error('Error code:', error.code);
+          if (error.stack) console.error('Stack trace:', error.stack);
+          sql = null;
+        }
+      } else {
+        console.log('⚠️ No DATABASE_URL found, running in mock mode');
+        sql = null;
+      }
+      return sql;
+    })();
+  }
+  return connectionPromise;
+}
+
+// Get SQL connection
+async function getSql() {
+  if (!sql) {
+    await initializeConnection();
+  }
+  return sql;
+}
+
+// Test database connection and create tables
 const testConnection = async () => {
+  const connection = await getSql();
+  if (!connection) {
+    console.log('⚠️ Database not available, skipping table creation');
+    return;
+  }
+  
   try {
-    const result = await sql`SELECT version()`;
+    const result = await connection`SELECT version()`;
     console.log('✅ Connected to Neon database successfully');
     console.log(`Database version: ${result[0].version}`);
     
@@ -34,7 +85,23 @@ const testConnection = async () => {
       )
     `;
     
-    console.log('✅ Users and notifications tables created/verified');
+    // Create scan history table if it doesn't exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS scan_history (
+        id SERIAL PRIMARY KEY,
+        scanned_code VARCHAR(100) NOT NULL,
+        scan_type VARCHAR(20) DEFAULT 'barcode',
+        item_id INTEGER,
+        product_name VARCHAR(255),
+        quantity INTEGER DEFAULT 1,
+        scan_status VARCHAR(20) DEFAULT 'found',
+        scanned_by VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        notes TEXT
+      )
+    `;
+    
+    console.log('✅ Users, notifications, and scan history tables created/verified');
   } catch (err) {
     console.error('❌ Database connection error:', err);
   }
@@ -197,8 +264,103 @@ const getUnreadNotificationCount = async () => {
   }
 };
 
+// Scan history functions
+const saveScanHistory = async (scanData) => {
+  const connection = await getSql();
+  if (!connection) {
+    console.log('⚠️ Database not available, scan history saved locally only');
+    return { id: Date.now(), created_at: new Date() };
+  }
+  
+  try {
+    // Validate required fields
+    if (!scanData.code) {
+      throw new Error('Scan code is required');
+    }
+
+    const result = await connection`
+      INSERT INTO scan_history (
+        scanned_code, scan_type, item_id, product_name, 
+        quantity, scan_status, scanned_by, notes
+      ) VALUES (
+        ${scanData.code}, 
+        ${scanData.type || 'barcode'}, 
+        ${scanData.itemId || null}, 
+        ${scanData.productName || null}, 
+        ${scanData.quantity || 1}, 
+        ${scanData.status || 'scanned'}, 
+        ${scanData.scannedBy || 'unknown'}, 
+        ${scanData.notes || null}
+      ) RETURNING id, created_at, scanned_code, scan_type, product_name, quantity, scan_status
+    `;
+    
+    console.log('Scan saved successfully:', result[0]);
+    return result[0];
+  } catch (err) {
+    console.error('Save scan history error:', err);
+    throw new Error(`Failed to save scan: ${err.message}`);
+  }
+};
+
+const getScanHistory = async (limit = 100) => {
+  if (!sql) {
+    console.log('⚠️ Database not available, returning empty scan history');
+    return [];
+  }
+  
+  try {
+    const result = await sql`
+      SELECT * FROM scan_history 
+      ORDER BY created_at DESC 
+      LIMIT ${limit}
+    `;
+    return result;
+  } catch (err) {
+    console.error('Get scan history error:', err);
+    return [];
+  }
+};
+
+const clearScanHistory = async () => {
+  if (!sql) {
+    console.log('⚠️ Database not available, scan history cleared locally only');
+    return true;
+  }
+  
+  try {
+    await sql`DELETE FROM scan_history`;
+    return true;
+  } catch (err) {
+    console.error('Clear scan history error:', err);
+    return false;
+  }
+};
+
+const deleteScanHistory = async (scanId) => {
+  if (!sql) {
+    console.log('⚠️ Database not available, scan history deleted locally only');
+    return true;
+  }
+
+  try {
+    await sql`DELETE FROM scan_history WHERE id = ${scanId}`;
+    // PostgreSQL DELETE doesn't return affected rows by default
+    const check = await sql`SELECT EXISTS(SELECT 1 FROM scan_history WHERE id = ${scanId})`;
+    return !check[0].exists; // Returns true if the row no longer exists
+  } catch (err) {
+    console.error('Delete scan history error:', err);
+    throw err; // Propagate error to handle it in the API
+  }
+};
+
+
 module.exports = {
-  sql,
+  sql: async () => {
+    if (!sql) {
+      await initializeConnection();
+    }
+    return sql;
+  },
   testConnection,
   initializeDatabase,
   authenticateUser,
@@ -206,6 +368,9 @@ module.exports = {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
-  getUnreadNotificationCount
-
+  getUnreadNotificationCount,
+  saveScanHistory,
+  getScanHistory,
+  clearScanHistory,
+  deleteScanHistory
 };
