@@ -169,6 +169,11 @@
       color: var(--body-font);
     }
 
+    .status-cancelled {
+      background-color: var(--danger-color);
+      color: var(--main-bg);
+    }
+
     .priority-high {
       background-color: var(--danger-color);
       color: var(--main-bg);
@@ -653,83 +658,7 @@
                   <th>Action</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td><strong>ORD-0001</strong></td>
-                  <td>John Smith</td>
-                  <td>
-                    <div class="d-flex align-items-center">
-                      <span>Wireless Earphone</span>
-                      <small class="text-muted ms-2">(ITM001)</small>
-                    </div>
-                    <small class="text-info">Stock: 15 available</small>
-                  </td>
-                  <td>2</td>
-                  <td>₱700.00</td>
-                  <td><span class="status-badge priority-high">High</span></td>
-                  <td><span class="status-badge status-delivered">Delivered</span></td>
-                  <td>2025-01-10</td>
-                  <td>2025-01-11</td>
-                  <td>2025-01-13</td>
-                  <td>TRK001234567</td>
-                  <td class="item-actions">
-                    <i class="bi bi-eye" title="View Details" onclick="viewOrder('ORD-0001')"></i>
-                    <i class="bi bi-box-seam" title="View in Inventory" onclick="viewInInventory('ITM001')"></i>
-                    <i class="bi bi-truck" title="Track" onclick="trackOrder('ORD-0001')"></i>
-                    <i class="bi bi-printer" title="Print Label" onclick="printLabel('ORD-0001')"></i>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>ORD-0002</strong></td>
-                  <td>Maria Garcia</td>
-                  <td>
-                    <div class="d-flex align-items-center">
-                      <span>USB Cable</span>
-                      <small class="text-muted ms-2">(ITM002)</small>
-                    </div>
-                    <small class="text-warning">Stock: 8 remaining</small>
-                  </td>
-                  <td>3</td>
-                  <td>₱225.00</td>
-                  <td><span class="status-badge priority-medium">Medium</span></td>
-                  <td><span class="status-badge status-shipped">Shipped</span></td>
-                  <td>2025-01-12</td>
-                  <td>2025-01-13</td>
-                  <td>2025-01-15</td>
-                  <td>TRK001234568</td>
-                  <td class="item-actions">
-                    <i class="bi bi-eye" title="View Details" onclick="viewOrder('ORD-0002')"></i>
-                    <i class="bi bi-box-seam" title="View in Inventory" onclick="viewInInventory('ITM002')"></i>
-                    <i class="bi bi-truck" title="Track" onclick="trackOrder('ORD-0002')"></i>
-                    <i class="bi bi-printer" title="Print Label" onclick="printLabel('ORD-0002')"></i>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>ORD-0003</strong></td>
-                  <td>Carlos Rodriguez</td>
-                  <td>
-                    <div class="d-flex align-items-center">
-                      <span>Wireless Earphone</span>
-                      <small class="text-muted ms-2">(ITM001)</small>
-                    </div>
-                    <small class="text-info">Stock: 15 available</small>
-                  </td>
-                  <td>1</td>
-                  <td>₱350.00</td>
-                  <td><span class="status-badge priority-low">Low</span></td>
-                  <td><span class="status-badge status-processing">Processing</span></td>
-                  <td>2025-01-14</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td class="item-actions">
-                    <i class="bi bi-eye" title="View Details" onclick="viewOrder('ORD-0003')"></i>
-                    <i class="bi bi-box-seam" title="View in Inventory" onclick="viewInInventory('ITM001')"></i>
-                    <i class="bi bi-pencil" title="Edit" onclick="editOrder('ORD-0003')"></i>
-                    <i class="bi bi-box-arrow-right" title="Ship Now" onclick="shipOrder('ORD-0003')"></i>
-                  </td>
-                </tr>
-              </tbody>
+              <tbody></tbody>
             </table>
           </div>
         </div>
@@ -741,7 +670,7 @@
           <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
               <i class="bi bi-box-arrow-right text-success fs-1"></i>
-              <h4 class="mt-2">3</h4>
+              <h4 class="mt-2" id="ordersTotalCard">0</h4>
               <p class="text-muted mb-0">Total Orders</p>
             </div>
           </div>
@@ -750,7 +679,7 @@
           <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
               <i class="bi bi-check-circle text-success fs-1"></i>
-              <h4 class="mt-2">1</h4>
+              <h4 class="mt-2" id="ordersDeliveredCard">0</h4>
               <p class="text-muted mb-0">Delivered</p>
             </div>
           </div>
@@ -759,7 +688,7 @@
           <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
               <i class="bi bi-truck text-primary fs-1"></i>
-              <h4 class="mt-2">1</h4>
+              <h4 class="mt-2" id="ordersShippedCard">0</h4>
               <p class="text-muted mb-0">Shipped</p>
             </div>
           </div>
@@ -768,7 +697,7 @@
           <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
               <i class="bi bi-clock text-warning fs-1"></i>
-              <h4 class="mt-2">1</h4>
+              <h4 class="mt-2" id="ordersProcessingCard">0</h4>
               <p class="text-muted mb-0">Processing</p>
             </div>
           </div>
@@ -818,74 +747,495 @@
   </div>
 </div>
 
+<!-- Add/Edit Order Modal -->
+<div class="modal fade" id="orderModal" tabindex="-1" aria-labelledby="orderModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="orderModalLabel">Add New Order</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="orderForm" class="needs-validation" novalidate>
+          <input type="hidden" id="orderHiddenId">
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="orderIdInput" class="form-label">Order ID</label>
+              <input type="text" class="form-control" id="orderIdInput" name="orderIdInput" required>
+            </div>
+            <div class="col-md-8">
+              <label for="customerName" class="form-label">Customer Name</label>
+              <input type="text" class="form-control" id="customerName" name="customerName" required>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="itemCode" class="form-label">Item Code</label>
+              <input type="text" class="form-control" id="itemCode" name="itemCode" required>
+            </div>
+            <div class="col-md-5">
+              <label for="productName" class="form-label">Product Name</label>
+              <input type="text" class="form-control" id="productName" name="productName" required>
+            </div>
+            <div class="col-md-3">
+              <label for="quantity" class="form-label">Quantity</label>
+              <input type="number" class="form-control" id="quantity" name="quantity" required min="1">
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="totalValue" class="form-label">Total Value</label>
+              <input type="number" step="0.01" class="form-control" id="totalValue" name="totalValue" required>
+            </div>
+            <div class="col-md-4">
+              <label for="priority" class="form-label">Priority</label>
+              <select class="form-select" id="priority" name="priority" required>
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="status" class="form-label">Status</label>
+              <select class="form-select" id="status" name="status" required>
+                <option value="processing" selected>Processing</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="orderDate" class="form-label">Order Date</label>
+              <input type="date" class="form-control" id="orderDate" name="orderDate">
+            </div>
+            <div class="col-md-4">
+              <label for="shipDate" class="form-label">Ship Date</label>
+              <input type="date" class="form-control" id="shipDate" name="shipDate">
+            </div>
+            <div class="col-md-4">
+              <label for="deliveryDate" class="form-label">Delivery Date</label>
+              <input type="date" class="form-control" id="deliveryDate" name="deliveryDate">
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="trackingNumber" class="form-label">Tracking Number</label>
+              <input type="text" class="form-control" id="trackingNumber" name="trackingNumber">
+            </div>
+            <div class="col-md-6">
+              <label for="orderNotes" class="form-label">Notes</label>
+              <input type="text" class="form-control" id="orderNotes" name="orderNotes">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveOrderBtn">Save Order</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View Order Modal -->
+<div class="modal fade" id="viewOrderModal" tabindex="-1" aria-labelledby="viewOrderModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="viewOrderModalLabel">Order Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="viewOrderBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   // Set current date
   document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
 
-  // Sample functions for interactivity
-  function createNewOrder() {
-    alert('Create New Order functionality would be implemented here');
-  }
+  let ordersData = [];
+  let currentOrderEditId = null;
 
-  function bulkShipOrders() {
-    alert('Bulk Ship Orders functionality would be implemented here');
-  }
+  document.addEventListener('DOMContentLoaded', () => {
+    loadOrders();
+    loadOrderStats();
+    setupOrderEvents();
+    loadNotifications(); // Load notifications on page load
+    loadNotificationCount(); // Load notification count on page load
+  });
 
-  function printShippingLabels() {
-    alert('Print Shipping Labels functionality would be implemented here');
-  }
+  async function loadOrders(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (filters.search) queryParams.append('search', filters.search);
+      if (filters.status) queryParams.append('status', filters.status);
+      if (filters.priority) queryParams.append('priority', filters.priority);
+      if (filters.date) queryParams.append('date', filters.date);
 
-  function generateReports() {
-    alert('Generate Reports functionality would be implemented here');
-  }
-
-  function viewOrder(id) {
-    alert('View order details for: ' + id);
-  }
-
-  function editOrder(id) {
-    alert('Edit order: ' + id);
-  }
-
-  function shipOrder(id) {
-    if (confirm('Are you sure you want to ship order ' + id + '?')) {
-      alert('Order ' + id + ' has been marked as shipped');
+      const res = await fetch(`/api/order-shipments?${queryParams.toString()}`);
+      const result = await res.json();
+      if (!result.success) throw new Error(result.message || 'Failed to load orders');
+      ordersData = result.data || [];
+      renderOrdersTable(ordersData);
+      document.getElementById('totalOrders').textContent = ordersData.length;
+    } catch (err) {
+      console.error('Error loading orders:', err);
     }
   }
 
-  function trackOrder(id) {
-    alert('Track order: ' + id);
+  async function loadOrderStats() {
+    try {
+      const res = await fetch('/api/order-shipments/stats');
+      const result = await res.json();
+      if (result.success) {
+        const s = result.data;
+        // Update stat cards if present
+        const totalEl = document.querySelector('#ordersTotalCard');
+        if (totalEl) totalEl.textContent = s.totalOrders;
+        const delEl = document.querySelector('#ordersDeliveredCard');
+        if (delEl) delEl.textContent = s.deliveredOrders;
+        const shEl = document.querySelector('#ordersShippedCard');
+        if (shEl) shEl.textContent = s.shippedOrders;
+        const prEl = document.querySelector('#ordersProcessingCard');
+        if (prEl) prEl.textContent = s.processingOrders;
+      }
+    } catch (e) {
+      console.error('Error loading order stats:', e);
+    }
   }
 
-  function printLabel(id) {
-    alert('Print shipping label for order: ' + id);
+  function renderOrdersTable(data = []) {
+    const tbody = document.querySelector('#ordersTable tbody');
+    tbody.innerHTML = '';
+
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="12" class="text-center text-muted py-4"><i class="bi bi-inbox fs-1 d-block mb-2"></i>No orders found</td></tr>`;
+      return;
+    }
+
+    data.forEach(order => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><strong>${order.order_id}</strong></td>
+        <td>${order.customer_name}</td>
+        <td>
+          <div class="d-flex align-items-center">
+            <span>${order.product_name}</span>
+            <small class="text-muted ms-2">(${order.item_code})</small>
+          </div>
+          <small class="text-muted" data-item-code="${order.item_code}">Loading stock...</small>
+        </td>
+        <td>${order.quantity}</td>
+        <td>₱${Number(order.total_value).toFixed(2)}</td>
+        <td><span class="status-badge priority-${order.priority}">${capitalize(order.priority)}</span></td>
+        <td><span class="status-badge status-${order.status}">${capitalize(order.status)}</span></td>
+        <td>${order.order_date || '-'}</td>
+        <td>${order.ship_date || '-'}</td>
+        <td>${order.delivery_date || '-'}</td>
+        <td>${order.tracking_number || '-'}</td>
+        <td class="item-actions">
+          <i class="bi bi-eye" title="View Details" onclick="viewOrder(${order.id})"></i>
+          <i class="bi bi-box-seam" title="View in Inventory" onclick="viewInInventory('${order.item_code}')"></i>
+          <i class="bi bi-pencil" title="Edit" onclick="editOrder(${order.id})"></i>
+          <i class="bi bi-box-arrow-right" title="Ship Now" onclick="shipOrder(${order.id})"></i>
+          <i class="bi bi-printer" title="Print Label" onclick="printLabel('${order.order_id}')"></i>
+          <i class="bi bi-trash" title="Delete" onclick="deleteOrder(${order.id})"></i>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+
+    // After render, fetch stock info in parallel
+    updateStockBadges();
   }
 
-  function viewInInventory(itemCode) {
-    // Redirect to inventory master data with the specific item highlighted
-    window.open('Inventory_Master_Data.html?highlight=' + itemCode, '_blank');
+  function capitalize(s) { return (s || '').charAt(0).toUpperCase() + (s || '').slice(1); }
+
+  async function updateStockBadges() {
+    const stockBadges = document.querySelectorAll('[data-item-code]');
+    const codes = Array.from(new Set(Array.from(stockBadges).map(el => el.getAttribute('data-item-code'))));
+    // For simplicity, fetch full inventory and map by item_code
+    const res = await fetch('/api/inventory');
+    const result = await res.json();
+    if (!result.success) return;
+    const items = result.data || [];
+    const map = new Map(items.map(i => [i.item_code, i]));
+    stockBadges.forEach(el => {
+      const code = el.getAttribute('data-item-code');
+      const item = map.get(code);
+      if (item) {
+        const qty = Number(item.total_quantity) || 0;
+        el.textContent = qty <= 5 ? `Stock: ${qty} remaining` : `Stock: ${qty} available`;
+        el.classList.toggle('text-warning', qty <= 5);
+        el.classList.toggle('text-info', qty > 5);
+      } else {
+        el.textContent = 'Stock: N/A';
+      }
+    });
+  }
+
+  function setupOrderEvents() {
+    document.getElementById('saveOrderBtn').addEventListener('click', saveOrder);
+    document.getElementById('searchOrder').addEventListener('input', () => applyOrderFilters());
+    document.getElementById('orderStatusFilter').addEventListener('change', applyOrderFilters);
+    document.getElementById('priorityFilter').addEventListener('change', applyOrderFilters);
+    document.getElementById('orderDateRange').addEventListener('change', applyOrderFilters);
   }
 
   function applyOrderFilters() {
-    const searchTerm = document.getElementById('searchOrder').value;
-    const status = document.getElementById('orderStatusFilter').value;
-    const priority = document.getElementById('priorityFilter').value;
-    const date = document.getElementById('orderDateRange').value;
-    
-    // Filter functionality would be implemented here
-    console.log('Applying filters:', { searchTerm, status, priority, date });
+    const filters = {
+      search: document.getElementById('searchOrder').value,
+      status: document.getElementById('orderStatusFilter').value,
+      priority: document.getElementById('priorityFilter').value,
+      date: document.getElementById('orderDateRange').value
+    };
+    loadOrders(filters);
   }
 
-  // Search functionality
-  document.getElementById('searchOrder').addEventListener('input', function(e) {
-    // Real-time search functionality would be implemented here
-    console.log('Searching for:', e.target.value);
-  });
+  function createNewOrder() {
+    currentOrderEditId = null;
+    document.getElementById('orderModalLabel').textContent = 'Add New Order';
+    document.getElementById('orderForm').reset();
+    new bootstrap.Modal(document.getElementById('orderModal')).show();
+  }
+
+  async function editOrder(id) {
+    try {
+      const res = await fetch(`/api/order-shipments/${id}`);
+      const result = await res.json();
+      if (!result.success) throw new Error(result.message || 'Failed to load order');
+      const o = result.data;
+      currentOrderEditId = id;
+      document.getElementById('orderModalLabel').textContent = 'Edit Order';
+      document.getElementById('orderHiddenId').value = o.id;
+      document.getElementById('orderIdInput').value = o.order_id;
+      document.getElementById('customerName').value = o.customer_name;
+      document.getElementById('itemCode').value = o.item_code;
+      document.getElementById('productName').value = o.product_name;
+      document.getElementById('quantity').value = o.quantity;
+      document.getElementById('totalValue').value = o.total_value;
+      document.getElementById('priority').value = o.priority;
+      document.getElementById('status').value = o.status;
+      document.getElementById('orderDate').value = o.order_date || '';
+      document.getElementById('shipDate').value = o.ship_date || '';
+      document.getElementById('deliveryDate').value = o.delivery_date || '';
+      document.getElementById('trackingNumber').value = o.tracking_number || '';
+      document.getElementById('orderNotes').value = o.notes || '';
+      new bootstrap.Modal(document.getElementById('orderModal')).show();
+    } catch (e) {
+      alert('Failed to load order');
+    }
+  }
+
+  async function saveOrder() {
+    const form = document.getElementById('orderForm');
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    const fd = new FormData(form);
+    const payload = {
+      order_id: fd.get('orderIdInput'),
+      customer_name: fd.get('customerName'),
+      item_code: fd.get('itemCode'),
+      product_name: fd.get('productName'),
+      quantity: parseInt(fd.get('quantity')),
+      total_value: parseFloat(fd.get('totalValue')),
+      priority: fd.get('priority'),
+      status: fd.get('status'),
+      order_date: fd.get('orderDate') || null,
+      ship_date: fd.get('shipDate') || null,
+      delivery_date: fd.get('deliveryDate') || null,
+      tracking_number: fd.get('trackingNumber') || null,
+      notes: fd.get('orderNotes') || null
+    };
+
+    let res;
+    if (currentOrderEditId) {
+      res = await fetch(`/api/order-shipments/${currentOrderEditId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    } else {
+      res = await fetch('/api/order-shipments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    }
+    const result = await res.json();
+    if (result.success) {
+      bootstrap.Modal.getInstance(document.getElementById('orderModal')).hide();
+      await loadOrders();
+      await loadOrderStats();
+    } else {
+      alert(result.message || 'Failed to save order');
+    }
+  }
+
+  async function viewOrder(id) {
+    try {
+      const res = await fetch(`/api/order-shipments/${id}`);
+      const result = await res.json();
+      if (!result.success) throw new Error('Failed');
+      const o = result.data;
+      const el = document.getElementById('viewOrderBody');
+      el.innerHTML = `
+        <div class="row">
+          <div class="col-md-6">
+            <p><strong>Order ID:</strong> ${o.order_id}</p>
+            <p><strong>Customer:</strong> ${o.customer_name}</p>
+            <p><strong>Product:</strong> ${o.product_name} <small class="text-muted">(${o.item_code})</small></p>
+            <p><strong>Quantity:</strong> ${o.quantity}</p>
+            <p><strong>Total Value:</strong> ₱${Number(o.total_value).toFixed(2)}</p>
+          </div>
+          <div class="col-md-6">
+            <p><strong>Priority:</strong> ${capitalize(o.priority)}</p>
+            <p><strong>Status:</strong> ${capitalize(o.status)}</p>
+            <p><strong>Order Date:</strong> ${o.order_date || 'N/A'}</p>
+            <p><strong>Ship Date:</strong> ${o.ship_date || 'N/A'}</p>
+            <p><strong>Delivery Date:</strong> ${o.delivery_date || 'N/A'}</p>
+            <p><strong>Tracking #:</strong> ${o.tracking_number || '-'}</p>
+          </div>
+        </div>
+        ${o.notes ? `<div class="mt-3"><strong>Notes:</strong><br>${o.notes}</div>` : ''}
+      `;
+      new bootstrap.Modal(document.getElementById('viewOrderModal')).show();
+    } catch {}
+  }
+
+  async function shipOrder(id) {
+    if (!confirm('Mark this order as shipped?')) return;
+    const today = new Date().toISOString().split('T')[0];
+    const res = await fetch(`/api/order-shipments/${id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'shipped', setShipDate: today }) });
+    const result = await res.json();
+    if (result.success) { loadOrders(); loadOrderStats(); }
+  }
+
+  async function deleteOrder(id) {
+    if (!confirm('Delete this order?')) return;
+    const res = await fetch(`/api/order-shipments/${id}`, { method: 'DELETE' });
+    const result = await res.json();
+    if (result.success) { loadOrders(); loadOrderStats(); }
+  }
+
+  function printLabel(orderId) {
+    window.print();
+  }
+
+  function viewInInventory(itemCode) {
+    window.open('Inventory.html?highlight=' + itemCode, '_blank');
+  }
+
+  // Bulk ship all processing orders
+  async function bulkShipOrders() {
+    if (!ordersData.length) return;
+    const toShip = ordersData.filter(o => o.status === 'processing');
+    if (!toShip.length) { alert('No processing orders to ship.'); return; }
+    if (!confirm(`Ship ${toShip.length} processing order(s)?`)) return;
+    const today = new Date().toISOString().split('T')[0];
+    await Promise.allSettled(toShip.map(o => fetch(`/api/order-shipments/${o.id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'shipped', setShipDate: today }) })));
+    await loadOrders();
+    await loadOrderStats();
+  }
+
+  function printShippingLabels() {
+    window.print();
+  }
+
+  function generateReports() {
+    const headers = ['Order ID','Customer','Item Code','Product','Quantity','Total Value','Priority','Status','Order Date','Ship Date','Delivery Date','Tracking #'];
+    const rows = ordersData.map(o => [o.order_id,o.customer_name,o.item_code,o.product_name,o.quantity,o.total_value,o.priority,o.status,o.order_date||'',o.ship_date||'',o.delivery_date||'',o.tracking_number||'']);
+    const csv = [headers, ...rows].map(r => r.map(c => '"' + String(c).replaceAll('"','""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `order_shipments_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  }
 
   function viewInventoryImpact() {
-    alert('Inventory Impact: Orders will reduce inventory by 6 units total (2x Wireless Earphone, 3x USB Cable, 1x Wireless Earphone)');
+    const totals = new Map();
+    ordersData.forEach(o => {
+      const key = `${o.item_code} ${o.product_name}`;
+      totals.set(key, (totals.get(key) || 0) + (o.quantity || 0));
+    });
+    const lines = Array.from(totals.entries()).map(([k,v]) => `- ${k}: ${v}`);
+    alert(`Inventory Impact (deductions by item):\n\n${lines.join('\n') || 'No data'}`);
   }
+
+  // Notifications and user helpers
+  async function loadNotifications() {
+    try {
+      const response = await fetch('/api/notifications');
+      const result = await response.json();
+      if (result.success) displayNotifications(result.data);
+    } catch (e) { console.error('Error loading notifications:', e); }
+  }
+  async function loadNotificationCount() {
+    try {
+      const response = await fetch('/api/notifications/unread-count');
+      const result = await response.json();
+      if (result.success) updateNotificationCount(result.count || (result.data && result.data.count) || 0);
+    } catch (e) { console.error('Error loading notification count:', e); }
+  }
+  function displayNotifications(notifications) {
+    const list = document.querySelector('.notification-list');
+    if (!list) return;
+    list.innerHTML = '';
+    (notifications || []).forEach(n => {
+      const div = document.createElement('div');
+      div.className = `notification-item ${n.is_read ? '' : 'notification-unread'}`;
+      div.setAttribute('data-id', n.id);
+      div.innerHTML = `<div class="notification-title">${n.title}</div><div class="notification-text">${n.message}</div><div class="notification-time">${formatTimeAgo(n.created_at)}</div>`;
+      div.addEventListener('click', () => markNotificationAsRead(n.id));
+      list.appendChild(div);
+    });
+  }
+  function updateNotificationCount(count) {
+    const badge = document.getElementById('notificationCount');
+    if (!badge) return;
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'flex' : 'none';
+  }
+  async function markNotificationAsRead(id) {
+    try {
+      await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+      await loadNotificationCount();
+      await loadNotifications();
+    } catch (e) { console.error('Error marking read:', e); }
+  }
+  async function markAllAsRead() {
+    try {
+      await fetch('/api/notifications/read-all', { method: 'POST' });
+      await loadNotificationCount();
+      await loadNotifications();
+    } catch (e) { console.error('Error mark all read:', e); }
+  }
+  function formatTimeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+    return `${Math.floor(diff / 86400)} days ago`;
+  }
+  async function fetchUser() {
+    try {
+      const response = await fetch('/api/user');
+      if (response.ok) {
+        const user = await response.json();
+        // optionally display
+      }
+    } catch (e) { console.error('fetchUser error', e); }
+  }
+  async function logout() {
+    try {
+      const response = await fetch('/logout', { method: 'POST' });
+      if (response.ok) window.location.href = '/loginpage.html';
+    } catch (e) {
+      window.location.href = '/loginpage.html';
+    }
+  }
+  setInterval(() => { loadNotifications(); loadNotificationCount(); }, 300000);
 </script>
 </body>
 </html>

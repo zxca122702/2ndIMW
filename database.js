@@ -240,8 +240,10 @@ const initializeDatabase = async () => {
     }
     
     // Initialize inventory tables
-    const { initializeInventoryTable } = require('./inventory');
+    const { initializeInventoryTable, initializeMaterialShipmentsTable, initializeOrderShipmentsTable } = require('./inventory');
     await initializeInventoryTable();
+    await initializeMaterialShipmentsTable();
+    await initializeOrderShipmentsTable();
     
   } catch (err) {
     console.error('❌ Database initialization error:', err);

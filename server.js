@@ -34,7 +34,15 @@ const {
   deleteMaterialShipment,
   getMaterialShipmentStats,
   updateShipmentStatus,
-  getShipmentsByCategoryId
+  getShipmentsByCategoryId,
+  // New order shipments
+  getAllOrderShipments,
+  getOrderShipmentById,
+  createOrderShipment,
+  updateOrderShipment,
+  deleteOrderShipment,
+  getOrderShipmentStats,
+  updateOrderShipmentStatus
 } = require('./inventory');
 require('dotenv').config();
 
@@ -708,6 +716,96 @@ app.delete('/api/material-shipments/:id', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error deleting material shipment:', error);
     res.status(500).json({ success: false, message: 'Failed to delete shipment' });
+  }
+});
+
+// Order Shipments API endpoints
+app.get('/api/order-shipments/stats', requireAuth, async (req, res) => {
+  try {
+    const stats = await getOrderShipmentStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Error fetching order shipment stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch order shipment statistics' });
+  }
+});
+
+app.get('/api/order-shipments', requireAuth, async (req, res) => {
+  try {
+    const { search, status, priority, date } = req.query;
+    const filters = { search, status, priority, date };
+    const orders = await getAllOrderShipments(filters);
+    res.json({ success: true, data: orders || [], count: orders ? orders.length : 0 });
+  } catch (error) {
+    console.error('Error fetching order shipments:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch order shipments' });
+  }
+});
+
+app.get('/api/order-shipments/:id', requireAuth, async (req, res) => {
+  try {
+    const order = await getOrderShipmentById(req.params.id);
+    if (order) {
+      res.json({ success: true, data: order });
+    } else {
+      res.status(404).json({ success: false, message: 'Order not found' });
+    }
+  } catch (error) {
+    console.error('Error fetching order shipment:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch order' });
+  }
+});
+
+app.post('/api/order-shipments', requireAuth, async (req, res) => {
+  try {
+    const newOrder = await createOrderShipment(req.body);
+    res.json({ success: true, message: 'Order created successfully', data: newOrder });
+  } catch (error) {
+    console.error('Error creating order shipment:', error);
+    res.status(500).json({ success: false, message: 'Failed to create order' });
+  }
+});
+
+app.put('/api/order-shipments/:id', requireAuth, async (req, res) => {
+  try {
+    const updatedOrder = await updateOrderShipment(req.params.id, req.body);
+    if (updatedOrder) {
+      res.json({ success: true, message: 'Order updated successfully', data: updatedOrder });
+    } else {
+      res.status(404).json({ success: false, message: 'Order not found' });
+    }
+  } catch (error) {
+    console.error('Error updating order shipment:', error);
+    res.status(500).json({ success: false, message: 'Failed to update order' });
+  }
+});
+
+app.delete('/api/order-shipments/:id', requireAuth, async (req, res) => {
+  try {
+    const deleted = await deleteOrderShipment(req.params.id);
+    if (deleted) {
+      res.json({ success: true, message: 'Order deleted successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Order not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting order shipment:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete order' });
+  }
+});
+
+app.post('/api/order-shipments/:id/status', requireAuth, async (req, res) => {
+  try {
+    const { status, setShipDate, setDeliveryDate } = req.body;
+    const updated = await updateOrderShipmentStatus(req.params.id, status, { setShipDate, setDeliveryDate });
+    if (updated) {
+      res.json({ success: true, message: 'Order status updated', data: updated });
+    } else {
+      res.status(404).json({ success: false, message: 'Order not found' });
+    }
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    res.status(500).json({ success: false, message: 'Failed to update order status' });
   }
 });
 
