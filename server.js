@@ -9,7 +9,10 @@ const {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
-  getUnreadNotificationCount
+  getUnreadNotificationCount,
+  saveScanHistory,
+  getScanHistory,
+  clearScanHistory
 } = require('./database');
 const {
   initializeInventoryTable,
@@ -351,6 +354,48 @@ app.get('/api/warehouses', requireAuth, async (req, res) => {
     res.json({ success: true, data: warehouses });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch warehouses' });
+  }
+});
+
+// API: Get scan history
+app.get('/api/scan-history', requireAuth, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 100;
+    const history = await getScanHistory(limit);
+    res.json({ success: true, data: history });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch scan history' });
+  }
+});
+
+// API: Save scan to history
+app.post('/api/scan-history', requireAuth, async (req, res) => {
+  try {
+    const scanData = req.body;
+    const savedScan = await saveScanHistory(scanData);
+    
+    if (savedScan) {
+      res.json({ success: true, message: 'Scan saved successfully', data: savedScan });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to save scan' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to save scan' });
+  }
+});
+
+// API: Clear scan history
+app.delete('/api/scan-history', requireAuth, async (req, res) => {
+  try {
+    const success = await clearScanHistory();
+    
+    if (success) {
+      res.json({ success: true, message: 'Scan history cleared successfully' });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to clear scan history' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to clear scan history' });
   }
 });
 

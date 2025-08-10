@@ -1,11 +1,27 @@
 const { neon } = require('@neondatabase/serverless');
 require('dotenv').config();
 
-// Create Neon serverless connection
-const sql = neon(process.env.DATABASE_URL);
+// Create Neon serverless connection (with fallback)
+let sql;
+try {
+  if (process.env.DATABASE_URL) {
+    sql = neon(process.env.DATABASE_URL);
+  } else {
+    console.log('⚠️ No DATABASE_URL found, running in mock mode');
+    sql = null;
+  }
+} catch (error) {
+  console.log('⚠️ Database connection failed, running in mock mode');
+  sql = null;
+}
 
 // Test database connection
 const testConnection = async () => {
+  if (!sql) {
+    console.log('⚠️ Database not available, skipping table creation');
+    return;
+  }
+  
   try {
     const result = await sql`SELECT version()`;
     console.log('✅ Connected to Neon database successfully');
@@ -34,7 +50,23 @@ const testConnection = async () => {
       )
     `;
     
-    console.log('✅ Users and notifications tables created/verified');
+    // Create scan history table if it doesn't exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS scan_history (
+        id SERIAL PRIMARY KEY,
+        scanned_code VARCHAR(100) NOT NULL,
+        scan_type VARCHAR(20) DEFAULT 'barcode',
+        item_id INTEGER,
+        product_name VARCHAR(255),
+        quantity INTEGER DEFAULT 1,
+        scan_status VARCHAR(20) DEFAULT 'found',
+        scanned_by VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        notes TEXT
+      )
+    `;
+    
+    console.log('✅ Users, notifications, and scan history tables created/verified');
   } catch (err) {
     console.error('❌ Database connection error:', err);
   }
@@ -197,6 +229,65 @@ const getUnreadNotificationCount = async () => {
   }
 };
 
+// Scan history functions
+const saveScanHistory = async (scanData) => {
+  if (!sql) {
+    console.log('⚠️ Database not available, scan history saved locally only');
+    return { id: Date.now(), created_at: new Date() };
+  }
+  
+  try {
+    const result = await sql`
+      INSERT INTO scan_history (
+        scanned_code, scan_type, item_id, product_name, 
+        quantity, scan_status, scanned_by, notes
+      ) VALUES (
+        ${scanData.code}, ${scanData.type}, ${scanData.itemId || null}, 
+        ${scanData.productName || null}, ${scanData.quantity || 1}, 
+        ${scanData.status}, ${scanData.scannedBy || 'unknown'}, ${scanData.notes || null}
+      ) RETURNING id, created_at
+    `;
+    return result[0];
+  } catch (err) {
+    console.error('Save scan history error:', err);
+    return null;
+  }
+};
+
+const getScanHistory = async (limit = 100) => {
+  if (!sql) {
+    console.log('⚠️ Database not available, returning empty scan history');
+    return [];
+  }
+  
+  try {
+    const result = await sql`
+      SELECT * FROM scan_history 
+      ORDER BY created_at DESC 
+      LIMIT ${limit}
+    `;
+    return result;
+  } catch (err) {
+    console.error('Get scan history error:', err);
+    return [];
+  }
+};
+
+const clearScanHistory = async () => {
+  if (!sql) {
+    console.log('⚠️ Database not available, scan history cleared locally only');
+    return true;
+  }
+  
+  try {
+    await sql`DELETE FROM scan_history`;
+    return true;
+  } catch (err) {
+    console.error('Clear scan history error:', err);
+    return false;
+  }
+};
+
 module.exports = {
   sql,
   testConnection,
@@ -206,6 +297,8 @@ module.exports = {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
-  getUnreadNotificationCount
-
+  getUnreadNotificationCount,
+  saveScanHistory,
+  getScanHistory,
+  clearScanHistory
 };
