@@ -1,8 +1,9 @@
-const { sql } = require('./database');
+const database = require('./database');
 
 // Initialize inventory table
 const initializeInventoryTable = async () => {
   try {
+    const sql = await database.sql();
     await sql`
       CREATE TABLE IF NOT EXISTS inventory_items (
         id SERIAL PRIMARY KEY,
@@ -56,29 +57,36 @@ const initializeInventoryTable = async () => {
     throw err;
   }
 
-  // Insert default Categories
-  await sql`
-  INSERT INTO categories (category_id, category_name) VALUES
-    ('CAT001', 'Electronics'),
-    ('CAT002', 'Accessories'),
-    ('CAT003', 'Components')
-  ON CONFLICT (category_id) DO NOTHING;
-`;
-console.log('✅ Categories inserted');
+  try {
+    // Insert default Categories
+    const sql = await database.sql();
+    await sql`
+      INSERT INTO categories (category_id, category_name) VALUES
+        ('CAT001', 'Electronics'),
+        ('CAT002', 'Accessories'),
+        ('CAT003', 'Components')
+      ON CONFLICT (category_id) DO NOTHING;
+    `;
+    console.log('✅ Categories inserted');
 
-// Insert default Warehouses
-await sql`
-  INSERT INTO warehouses (warehouse_id, warehouse_name) VALUES
-    ('WH001', 'Main Warehouse'),
-    ('WH002', 'Secondary Warehouse')
-  ON CONFLICT (warehouse_id) DO NOTHING;
-`;
-console.log('✅ Warehouse inserted');
+    // Insert default Warehouses
+    await sql`
+      INSERT INTO warehouses (warehouse_id, warehouse_name) VALUES
+        ('WH001', 'Main Warehouse'),
+        ('WH002', 'Secondary Warehouse')
+      ON CONFLICT (warehouse_id) DO NOTHING;
+    `;
+    console.log('✅ Warehouse inserted');
+  } catch (err) {
+    console.error('❌ Error inserting default data:', err);
+    throw err;
+  }
 };
 
 // Get all inventory items with optional filters
 const getAllInventoryItems = async (filters = {}) => {
   try {
+    const sql = await database.sql();
     let query = sql`
       SELECT 
         i.*,
@@ -149,6 +157,7 @@ const getAllInventoryItems = async (filters = {}) => {
 // Get inventory item by ID
 const getInventoryItemById = async (id) => {
   try {
+    const sql = await database.sql();
     const result = await sql`
       SELECT 
         i.*,
@@ -170,6 +179,7 @@ const getInventoryItemById = async (id) => {
 // Create new inventory item
 const createInventoryItem = async (itemData) => {
   try {
+    const sql = await database.sql();
     const {
       item_code,
       product_name,
@@ -204,6 +214,7 @@ const createInventoryItem = async (itemData) => {
 // Update inventory item
 const updateInventoryItem = async (id, itemData) => {
   try {
+    const sql = await database.sql();
     const {
       item_code,
       product_name,
@@ -244,6 +255,7 @@ const updateInventoryItem = async (id, itemData) => {
 // Delete inventory item
 const deleteInventoryItem = async (id) => {
   try {
+    const sql = await database.sql();
     const result = await sql`
       DELETE FROM inventory_items
       WHERE id = ${id}
@@ -260,6 +272,7 @@ const deleteInventoryItem = async (id) => {
 // Delete multiple inventory items
 const deleteMultipleInventoryItems = async (ids) => {
   try {
+    const sql = await database.sql();
     const result = await sql`
       DELETE FROM inventory_items
       WHERE id = ANY(${ids})
@@ -276,6 +289,7 @@ const deleteMultipleInventoryItems = async (ids) => {
 // Get all categories
 const getAllCategories = async () => {
   try {
+    const sql = await database.sql();
     const result = await sql`
       SELECT * FROM categories
       ORDER BY category_name
@@ -291,6 +305,7 @@ const getAllCategories = async () => {
 // Get all warehouses
 const getAllWarehouses = async () => {
   try {
+    const sql = await database.sql();
     const result = await sql`
       SELECT * FROM warehouses
       ORDER BY warehouse_name
@@ -306,6 +321,7 @@ const getAllWarehouses = async () => {
 // Get inventory statistics
 const getInventoryStats = async () => {
   try {
+    const sql = await database.sql();
     const totalItems = await sql`SELECT COUNT(*) as count FROM inventory_items`;
     const activeItems = await sql`SELECT COUNT(*) as count FROM inventory_items WHERE status = 'active'`;
     const lowStockItems = await sql`SELECT COUNT(*) as count FROM inventory_items WHERE total_quantity < 10`;
@@ -326,6 +342,7 @@ const getInventoryStats = async () => {
 // Update item quantity
 const updateItemQuantity = async (id, newQuantity, operation = 'set') => {
   try {
+    const sql = await database.sql();
     let query;
     
     if (operation === 'add') {
