@@ -83,6 +83,39 @@ const initializeInventoryTable = async () => {
   }
 };
 
+// Initialize material shipments table
+const initializeMaterialShipmentsTable = async () => {
+  try {
+    const sql = await database.sql();
+    await sql`
+      CREATE TABLE IF NOT EXISTS material_shipments (
+        id SERIAL PRIMARY KEY,
+        shipment_id VARCHAR(50) UNIQUE NOT NULL,
+        material_name VARCHAR(255) NOT NULL,
+        item_code VARCHAR(50),
+        quantity INTEGER NOT NULL,
+        unit VARCHAR(20) NOT NULL,
+        shipment_type VARCHAR(20) NOT NULL,
+        source VARCHAR(255) NOT NULL,
+        destination VARCHAR(255) NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        date_shipped DATE,
+        estimated_delivery DATE,
+        received_date DATE,
+        handled_by VARCHAR(100),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    
+    console.log('✅ Material shipments table created/verified');
+  } catch (err) {
+    console.error('❌ Error creating material shipments table:', err);
+    throw err;
+  }
+};
+
 // Get all inventory items with optional filters
 const getAllInventoryItems = async (filters = {}) => {
   try {
@@ -376,8 +409,257 @@ const updateItemQuantity = async (id, newQuantity, operation = 'set') => {
   }
 };
 
+// Get all material shipments with optional filters
+const getAllMaterialShipments = async (filters = {}) => {
+  try {
+    const sql = await database.sql();
+    let query = sql`
+      SELECT * FROM material_shipments
+    `;
+    
+    let conditions = [];
+    let params = [];
+    
+    if (filters.search) {
+      conditions.push(`(material_name ILIKE $${params.length + 1} OR shipment_id ILIKE $${params.length + 1} OR source ILIKE $${params.length + 1})`);
+      params.push(`%${filters.search}%`);
+    }
+    
+    if (filters.status) {
+      conditions.push(`status = $${params.length + 1}`);
+      params.push(filters.status);
+    }
+    
+    if (filters.type) {
+      conditions.push(`shipment_type = $${params.length + 1}`);
+      params.push(filters.type);
+    }
+    
+    if (filters.date) {
+      conditions.push(`date_shipped = $${params.length + 1}`);
+      params.push(filters.date);
+    }
+    
+    if (conditions.length > 0) {
+      const whereClause = ` WHERE ${conditions.join(' AND ')}`;
+      query = sql`
+        SELECT * FROM material_shipments
+        ${sql.unsafe(whereClause)}
+        ORDER BY created_at DESC
+      `;
+    } else {
+      query = sql`
+        SELECT * FROM material_shipments
+        ORDER BY created_at DESC
+      `;
+    }
+    
+    const result = await query;
+    return result;
+  } catch (err) {
+    console.error('Error fetching material shipments:', err);
+    throw err;
+  }
+};
+
+// Get material shipment by ID
+const getMaterialShipmentById = async (id) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      SELECT * FROM material_shipments
+      WHERE id = ${id}
+    `;
+    
+    return result[0] || null;
+  } catch (err) {
+    console.error('Error fetching material shipment:', err);
+    throw err;
+  }
+};
+
+// Create new material shipment
+const createMaterialShipment = async (shipmentData) => {
+  try {
+    const sql = await database.sql();
+    const {
+      shipment_id,
+      material_name,
+      item_code,
+      quantity,
+      unit,
+      shipment_type,
+      source,
+      destination,
+      status,
+      date_shipped,
+      estimated_delivery,
+      received_date,
+      handled_by,
+      notes
+    } = shipmentData;
+    
+    const result = await sql`
+      INSERT INTO material_shipments (
+        shipment_id, material_name, item_code, quantity, unit, shipment_type,
+        source, destination, status, date_shipped, estimated_delivery,
+        received_date, handled_by, notes, updated_at
+      ) VALUES (
+        ${shipment_id}, ${material_name}, ${item_code}, ${quantity}, ${unit}, ${shipment_type},
+        ${source}, ${destination}, ${status}, ${date_shipped}, ${estimated_delivery},
+        ${received_date}, ${handled_by}, ${notes}, CURRENT_TIMESTAMP
+      )
+      RETURNING *
+    `;
+    
+    return result[0];
+  } catch (err) {
+    console.error('Error creating material shipment:', err);
+    throw err;
+  }
+};
+
+// Update material shipment
+const updateMaterialShipment = async (id, shipmentData) => {
+  try {
+    const sql = await database.sql();
+    const {
+      shipment_id,
+      material_name,
+      item_code,
+      quantity,
+      unit,
+      shipment_type,
+      source,
+      destination,
+      status,
+      date_shipped,
+      estimated_delivery,
+      received_date,
+      handled_by,
+      notes
+    } = shipmentData;
+    
+    const result = await sql`
+      UPDATE material_shipments SET
+        shipment_id = ${shipment_id},
+        material_name = ${material_name},
+        item_code = ${item_code},
+        quantity = ${quantity},
+        unit = ${unit},
+        shipment_type = ${shipment_type},
+        source = ${source},
+        destination = ${destination},
+        status = ${status},
+        date_shipped = ${date_shipped},
+        estimated_delivery = ${estimated_delivery},
+        received_date = ${received_date},
+        handled_by = ${handled_by},
+        notes = ${notes},
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    
+    return result[0];
+  } catch (err) {
+    console.error('Error updating material shipment:', err);
+    throw err;
+  }
+};
+
+// Delete material shipment
+const deleteMaterialShipment = async (id) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      DELETE FROM material_shipments
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    
+    return result[0];
+  } catch (err) {
+    console.error('Error deleting material shipment:', err);
+    throw err;
+  }
+};
+
+// Get material shipment statistics
+const getMaterialShipmentStats = async () => {
+  try {
+    const sql = await database.sql();
+    const totalShipments = await sql`SELECT COUNT(*) as count FROM material_shipments`;
+    const deliveredShipments = await sql`SELECT COUNT(*) as count FROM material_shipments WHERE status = 'delivered'`;
+    const pendingShipments = await sql`SELECT COUNT(*) as count FROM material_shipments WHERE status = 'pending'`;
+    const shippedShipments = await sql`SELECT COUNT(*) as count FROM material_shipments WHERE status = 'shipped'`;
+    const inboundShipments = await sql`SELECT COUNT(*) as count FROM material_shipments WHERE shipment_type = 'inbound'`;
+    const outboundShipments = await sql`SELECT COUNT(*) as count FROM material_shipments WHERE shipment_type = 'outbound'`;
+    
+    return {
+      totalShipments: parseInt(totalShipments[0].count),
+      deliveredShipments: parseInt(deliveredShipments[0].count),
+      pendingShipments: parseInt(pendingShipments[0].count),
+      shippedShipments: parseInt(shippedShipments[0].count),
+      inboundShipments: parseInt(inboundShipments[0].count),
+      outboundShipments: parseInt(outboundShipments[0].count)
+    };
+  } catch (err) {
+    console.error('Error fetching material shipment statistics:', err);
+    throw err;
+  }
+};
+
+// Update shipment status
+const updateShipmentStatus = async (id, status, receivedDate = null) => {
+  try {
+    const sql = await database.sql();
+    let query;
+    
+    if (receivedDate) {
+      query = sql`
+        UPDATE material_shipments 
+        SET status = ${status}, received_date = ${receivedDate}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${id}
+        RETURNING *
+      `;
+    } else {
+      query = sql`
+        UPDATE material_shipments 
+        SET status = ${status}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${id}
+        RETURNING *
+      `;
+    }
+    
+    const result = await query;
+    return result[0];
+  } catch (err) {
+    console.error('Error updating shipment status:', err);
+    throw err;
+  }
+};
+
+// Get shipments by inventory item
+const getShipmentsByItemCode = async (itemCode) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      SELECT * FROM material_shipments
+      WHERE item_code = ${itemCode}
+      ORDER BY created_at DESC
+    `;
+    
+    return result;
+  } catch (err) {
+    console.error('Error fetching shipments by item code:', err);
+    throw err;
+  }
+};
+
 module.exports = {
   initializeInventoryTable,
+  initializeMaterialShipmentsTable,
   getAllInventoryItems,
   getInventoryItemById,
   createInventoryItem,
@@ -387,5 +669,13 @@ module.exports = {
   getAllCategories,
   getAllWarehouses,
   getInventoryStats,
-  updateItemQuantity
+  updateItemQuantity,
+  getAllMaterialShipments,
+  getMaterialShipmentById,
+  createMaterialShipment,
+  updateMaterialShipment,
+  deleteMaterialShipment,
+  getMaterialShipmentStats,
+  updateShipmentStatus,
+  getShipmentsByItemCode
 };
