@@ -9,7 +9,11 @@ const {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
-  getUnreadNotificationCount
+  getUnreadNotificationCount,
+  saveScanHistory,
+  getScanHistory,
+  clearScanHistory,
+  deleteScanHistory
 } = require('./database');
 const {
   initializeInventoryTable,
@@ -208,29 +212,86 @@ app.post('/api/notifications/read-all', requireAuth, async (req, res) => {
   }
 });
 
-// Test route to create a notification
-app.post('/api/test-notification', requireAuth, async (req, res) => {
+// Create new notification
+app.post('/api/notifications', requireAuth, async (req, res) => {
   try {
-    const notification = await createNotification(
-      'Test Notification',
-      'This is a test notification to verify the system is working',
-      'info'
-    );
-    res.json({ success: true, message: 'Test notification created', data: notification });
+    const { title, message, type = 'info' } = req.body;
+
+    // Validate required fields
+    if (!title || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title and message are required'
+      });
+    }
+
+    // Validate notification type
+    const validTypes = ['info', 'success', 'warning', 'error'];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid notification type'
+      });
+    }
+
+    const notification = await createNotification(title, message, type);
+    
+    res.json({ 
+      success: true, 
+      message: 'Notification created successfully', 
+      data: notification 
+    });
   } catch (error) {
-    console.error('Test notification error:', error);
-    res.status(500).json({ success: false, message: 'Failed to create test notification' });
+    console.error('Create notification error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to create notification',
+      error: error.message 
+    });
   }
 });
 
 // API route to check database connection status
 app.get('/api/db-status', async (req, res) => {
   try {
-    const result = await sql`SELECT current_database(), version()`;
+    // First check if we have DATABASE_URL
+    if (!process.env.DATABASE_URL) {
+      return res.json({
+        connected: false,
+        error: 'DATABASE_URL not found in environment',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Try to get a new connection
+    const database = require('./database');
+    const sqlConnection = await database.sql();
+    
+    if (!sqlConnection) {
+      return res.json({
+        connected: false,
+        error: 'Could not initialize SQL connection',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const result = await sqlConnection`
+      SELECT current_database(), 
+             version(), 
+             current_user,
+             inet_server_addr() as server_ip,
+             inet_server_port() as server_port
+    `;
     
     res.json({
       connected: true,
       database: result[0].current_database,
+      version: result[0].version,
+      user: result[0].current_user,
+      server: {
+        ip: result[0].server_ip,
+        port: result[0].server_port
+      },
       host: 'Neon PostgreSQL Serverless',
       timestamp: new Date().toISOString()
     });
@@ -238,7 +299,9 @@ app.get('/api/db-status', async (req, res) => {
     console.error('Database status check failed:', error);
     res.json({
       connected: false,
-      error: 'Connection failed',
+      error: error.message,
+      errorType: error.name,
+      errorCode: error.code,
       timestamp: new Date().toISOString()
     });
   }
@@ -351,6 +414,159 @@ app.get('/api/warehouses', requireAuth, async (req, res) => {
     res.json({ success: true, data: warehouses });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch warehouses' });
+  }
+});
+
+// API: Get scan history
+app.get('/api/scan-history', requireAuth, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 100;
+    
+    // Validate limit
+    if (isNaN(limit) || limit < 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid limit parameter'
+      });
+    }
+
+    const history = await getScanHistory(limit);
+    
+    res.json({ 
+      success: true, 
+      data: history,
+      count: history.length,
+      limit: limit
+    });
+  } catch (err) {
+    console.error('Fetch scan history error:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch scan history',
+      error: err.message 
+    });
+  }
+});
+
+// API: Save scan to history
+app.post('/api/scan-history', requireAuth, async (req, res) => {
+  try {
+    // Validate required fields
+    const { code, type } = req.body;
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Scan code is required'
+      });
+    }
+
+    // Add user info to scan data
+    const scanData = {
+      ...req.body,
+      scannedBy: req.session.user.username,
+      notes: req.body.notes || `Scanned by ${req.session.user.username}`
+    };
+
+    const savedScan = await saveScanHistory(scanData);
+    
+    if (savedScan) {
+      // Create notification for successful scan
+      await createNotification(
+        'New Scan Recorded',
+        `New ${scanData.type || 'barcode'} scan: ${scanData.code}`,
+        'info'
+      );
+      
+      res.json({ 
+        success: true, 
+        message: 'Scan saved successfully', 
+        data: savedScan 
+      });
+    } else {
+      throw new Error('Failed to save scan to database');
+    }
+  } catch (err) {
+    console.error('Save scan error:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to save scan',
+      error: err.message 
+    });
+  }
+});
+
+// API: Clear scan history
+app.delete('/api/scan-history', requireAuth, async (req, res) => {
+  try {
+    const success = await clearScanHistory();
+    
+    if (success) {
+      // Create notification for successful clear
+      await createNotification(
+        'Scan History Cleared',
+        'All scan history records have been cleared',
+        'warning'
+      );
+      
+      res.json({ 
+        success: true, 
+        message: 'Scan history cleared successfully' 
+      });
+    } else {
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to clear scan history' 
+      });
+    }
+  } catch (err) {
+    console.error('Clear scan history error:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to clear scan history',
+      error: err.message 
+    });
+  }
+});
+
+// API: Delete individual scan history record
+app.delete('/api/scan-history/:id', requireAuth, async (req, res) => {
+  try {
+    const scanId = parseInt(req.params.id);
+    
+    if (isNaN(scanId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid scan ID format'
+      });
+    }
+
+    const deleted = await deleteScanHistory(scanId);
+    
+    if (deleted) {
+      // Create notification for successful deletion
+      await createNotification(
+        'Scan Deleted',
+        `Scan record ${scanId} has been deleted`,
+        'info'
+      );
+      
+      res.json({
+        success: true,
+        message: 'Scan deleted successfully'
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'Scan record not found'
+      });
+    }
+  } catch (error) {
+    console.error('Delete scan error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to delete scan',
+      error: error.message
+    });
   }
 });
 
