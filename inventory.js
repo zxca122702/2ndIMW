@@ -107,6 +107,7 @@ const initializeMaterialShipmentsTable = async () => {
         id SERIAL PRIMARY KEY,
         shipment_id VARCHAR(50) UNIQUE NOT NULL,
         material_id VARCHAR(50),
+        category_id VARCHAR(50),
         material_name VARCHAR(255) NOT NULL,
         item_code VARCHAR(50),
         quantity INTEGER NOT NULL,
@@ -559,6 +560,8 @@ const createMaterialShipment = async (shipmentData) => {
     }
     const {
       shipment_id,
+      material_id,
+      category_id,
       material_name,
       item_code,
       quantity,
@@ -576,11 +579,11 @@ const createMaterialShipment = async (shipmentData) => {
     
     const result = await sql`
       INSERT INTO material_shipments (
-        shipment_id, material_name, item_code, quantity, unit, shipment_type,
+        shipment_id, material_id, category_id, material_name, item_code, quantity, unit, shipment_type,
         source, destination, status, date_shipped, estimated_delivery,
         received_date, handled_by, notes, updated_at
       ) VALUES (
-        ${shipment_id}, ${material_name}, ${item_code}, ${quantity}, ${unit}, ${shipment_type},
+        ${shipment_id}, ${material_id}, ${category_id}, ${material_name}, ${item_code}, ${quantity}, ${unit}, ${shipment_type},
         ${source}, ${destination}, ${status}, ${date_shipped}, ${estimated_delivery},
         ${received_date}, ${handled_by}, ${notes}, CURRENT_TIMESTAMP
       )
@@ -604,6 +607,8 @@ const updateMaterialShipment = async (id, shipmentData) => {
     }
     const {
       shipment_id,
+      material_id,
+      category_id,
       material_name,
       item_code,
       quantity,
@@ -622,6 +627,8 @@ const updateMaterialShipment = async (id, shipmentData) => {
     const result = await sql`
       UPDATE material_shipments SET
         shipment_id = ${shipment_id},
+        material_id = ${material_id},
+        category_id = ${category_id},
         material_name = ${material_name},
         item_code = ${item_code},
         quantity = ${quantity},

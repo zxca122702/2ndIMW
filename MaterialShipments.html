@@ -602,9 +602,10 @@
               <thead>
                 <tr>
                   <th>Shipment ID</th>
-                  <th>Material/Stock Name</th>
-                  <th>Material ID</th>
-                  <th>Quantity</th>
+                                  <th>Material/Stock Name</th>
+                <th>Material ID</th>
+                <th>Category ID</th>
+                <th>Quantity</th>
                   <th>Unit</th>
                   <th>Type</th>
                   <th>Source</th>
@@ -620,14 +621,15 @@
               <tbody>
                 <tr>
                   <td><strong>MAT-0001</strong></td>
-                  <td>
-                    <div class="d-flex align-items-center">
-                      <span>Aluminum Sheets</span>
-                      <small class="text-muted ms-2">(Raw Material)</small>
-                    </div>
-                  </td>
-                  <td>MAT001</td>
-                  <td>100</td>
+                                  <td>
+                  <div class="d-flex align-items-center">
+                    <span>Aluminum Sheets</span>
+                    <small class="text-muted ms-2">(Raw Material)</small>
+                  </div>
+                </td>
+                <td>MAT001</td>
+                <td>CAT001</td>
+                <td>100</td>
                   <td>kg</td>
                   <td><span class="badge bg-primary">Inbound</span></td>
                   <td>Supplier XYZ</td>
@@ -653,6 +655,7 @@
                     </div>
                   </td>
                   <td>MAT002</td>
+                  <td>CAT002</td>
                   <td>50</td>
                   <td>pcs</td>
                   <td><span class="badge bg-success">Inbound</span></td>
@@ -679,6 +682,7 @@
                     </div>
                   </td>
                   <td>MAT003</td>
+                  <td>CAT002</td>
                   <td>25</td>
                   <td>pcs</td>
                   <td><span class="badge bg-warning text-dark">Outbound</span></td>
@@ -837,12 +841,18 @@
             </div>
           </div>
           <div class="row">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="materialId" class="form-label">Material ID</label>
-                <input type="text" class="form-control" id="materialId" name="materialId" placeholder="Enter material ID">
-              </div>
-            </div>
+                            <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="materialId" class="form-label">Material ID</label>
+                    <input type="text" class="form-control" id="materialId" name="materialId" placeholder="Enter material ID">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="categoryId" class="form-label">Category ID</label>
+                    <input type="text" class="form-control" id="categoryId" name="categoryId" placeholder="Enter category ID">
+                  </div>
+                </div>
             <div class="col-md-6">
               <div class="mb-3">
                 <label for="itemCode" class="form-label">Item Code</label>
@@ -1221,7 +1231,7 @@ function renderShipmentsTable(data = []) {
   if (data.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="14" class="text-center text-muted py-4">
+                        <td colspan="15" class="text-center text-muted py-4">
           <i class="bi bi-inbox fs-1 d-block mb-2"></i>
           No shipments found
         </td>
@@ -1240,8 +1250,9 @@ function renderShipmentsTable(data = []) {
           ${shipment.item_code ? `<small class="text-muted ms-2">(${shipment.item_code})</small>` : ''}
         </div>
       </td>
-      <td>${shipment.material_id || '-'}</td>
-      <td>${shipment.quantity}</td>
+                      <td>${shipment.material_id || '-'}</td>
+                <td>${shipment.category_id || '-'}</td>
+                <td>${shipment.quantity}</td>
       <td>${shipment.unit}</td>
       <td><span class="badge bg-${shipment.shipment_type === 'inbound' ? 'primary' : 'success'}">${shipment.shipment_type}</span></td>
       <td>${shipment.source}</td>
@@ -1277,7 +1288,8 @@ function searchShipments(searchTerm) {
   const filtered = shipmentsData.filter(shipment => 
     shipment.shipment_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     shipment.material_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (shipment.material_id && shipment.material_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (shipment.material_id && shipment.material_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (shipment.category_id && shipment.category_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
     shipment.source.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
@@ -1310,6 +1322,7 @@ function applyFilters() {
       s.shipment_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.material_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (s.material_id && s.material_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (s.category_id && s.category_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
       s.source.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }
@@ -1378,6 +1391,7 @@ async function editShipment(id) {
       document.getElementById('shipmentId').value = shipment.id;
       document.getElementById('shipmentIdInput').value = shipment.shipment_id;
       document.getElementById('materialId').value = shipment.material_id || '';
+      document.getElementById('categoryId').value = shipment.category_id || '';
       document.getElementById('materialName').value = shipment.material_name;
       document.getElementById('itemCode').value = shipment.item_code || '';
       document.getElementById('quantity').value = shipment.quantity;
@@ -1416,6 +1430,7 @@ async function saveShipment() {
     const shipmentData = {
       shipment_id: formData.get('shipmentIdInput'),
       material_id: formData.get('materialId') || null,
+      category_id: formData.get('categoryId') || null,
       material_name: formData.get('materialName'),
       item_code: formData.get('itemCode') || null,
       quantity: parseInt(formData.get('quantity')),
@@ -1484,6 +1499,7 @@ async function viewShipment(id) {
           <div class="col-md-6">
             <p><strong>Shipment ID:</strong> ${shipment.shipment_id}</p>
             <p><strong>Material ID:</strong> ${shipment.material_id || 'N/A'}</p>
+            <p><strong>Category ID:</strong> ${shipment.category_id || 'N/A'}</p>
             <p><strong>Material Name:</strong> ${shipment.material_name}</p>
             <p><strong>Item Code:</strong> ${shipment.item_code || 'N/A'}</p>
             <p><strong>Quantity:</strong> ${shipment.quantity} ${shipment.unit}</p>
@@ -1568,11 +1584,12 @@ function exportShipments() {
 
 // Generate CSV content
 function generateCSV(data) {
-  const headers = ['Shipment ID', 'Material Name', 'Material ID', 'Item Code', 'Quantity', 'Unit', 'Type', 'Status', 'Source', 'Destination', 'Date Shipped', 'Estimated Delivery', 'Received Date', 'Handled By'];
+  const headers = ['Shipment ID', 'Material Name', 'Material ID', 'Category ID', 'Item Code', 'Quantity', 'Unit', 'Type', 'Status', 'Source', 'Destination', 'Date Shipped', 'Estimated Delivery', 'Received Date', 'Handled By'];
   const rows = data.map(item => [
     item.shipment_id,
     item.material_name,
     item.material_id || '',
+    item.category_id || '',
     item.item_code || '',
     item.quantity,
     item.unit,
